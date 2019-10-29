@@ -1,0 +1,67 @@
+Resources:
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      # AdminCreateUserConfig: AdminCreateUserConfig
+      # AliasAttributes:
+      #   - String
+      AutoVerifiedAttributes:
+        - email
+      # DeviceConfiguration: DeviceConfiguration
+      # EmailConfiguration: EmailConfiguration
+      # EmailVerificationMessage: String
+      # EmailVerificationSubject: String
+      # EnabledMfas:
+      #   - String
+      # LambdaConfig: LambdaConfig
+      # MfaConfiguration: String
+      # Policies: Policies
+      # Schema:
+      #   - SchemaAttribute
+      # SmsAuthenticationMessage: String
+      # SmsConfiguration: SmsConfiguration
+      # SmsVerificationMessage: String
+      UsernameAttributes:
+        - email
+      # UserPoolAddOns: UserPoolAddOns
+      UserPoolName: serverless-recipes-user-pool-${self:custom.currentStage}
+      # UserPoolTags: Json
+      # VerificationMessageTemplate: VerificationMessageTemplate
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      # AllowedOAuthFlows:
+      #   - String
+      # AllowedOAuthFlowsUserPoolClient: Boolean
+      # AllowedOAuthScopes:
+      #   - String
+      # AnalyticsConfiguration:
+      #   AnalyticsConfiguration
+      # CallbackURLs:
+      #   - String
+      ClientName: serverless-recipes-user-pool-client-${self:custom.currentStage}
+      # DefaultRedirectURI: String
+      # ExplicitAuthFlows:
+      #   - String
+      GenerateSecret: false
+      # LogoutURLs:
+      #   - String
+      # ReadAttributes:
+      #   - String
+      # RefreshTokenValidity: Integer
+      # SupportedIdentityProviders:
+      #   - String
+      UserPoolId:
+        Ref: CognitoUserPool
+      # WriteAttributes:
+      #   - String
+
+# Print out the Id of the User Pool that is created
+Outputs:
+  UserPoolId:
+    Value:
+      Ref: CognitoUserPool
+
+  UserPoolClientId:
+    Value:
+      Ref: CognitoUserPoolClient

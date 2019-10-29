@@ -102,13 +102,5 @@ functions:
 #      variable2: value2
 
 # CloudFormation resource templates
-# resources:
-#   Resources:
-#     NewResource:
-#       Type: AWS::S3::Bucket
-#       Properties:
-#         BucketName: my-new-bucket
-#   Outputs:
-#     NewOutput:
-#       Description: "Description for the output"
-#       Value: "Some output value"
+resources:
+  - ${file(resources/cognito-user-pool.yml)}
