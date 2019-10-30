@@ -12,19 +12,21 @@ provider:
   runtime: nodejs10.x
   stage: ${self:custom.currentStage}
   region: us-west-2
+  profile: ${self:custom.profiles.dev}
+  cfnRole: ${self:custom.secrets.AWS_CRN_ROLE}
 
 # add statements to the Lambda function's IAM Role
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - dynamodb:DescribeTable
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-      Resource: "*"
+  # iamRoleStatements:
+    # - Effect: "Allow"
+      # Action:
+        # - dynamodb:DescribeTable
+        # - dynamodb:Query
+        # - dynamodb:Scan
+        # - dynamodb:GetItem
+        # - dynamodb:PutItem
+        # - dynamodb:UpdateItem
+        # - dynamodb:DeleteItem
+      # Resource: "*"
 #      Action:
 #        - "s3:ListBucket"
 #      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
@@ -40,8 +42,11 @@ provider:
 
 # define and reference custom properties and values
 custom:
+  secrets: ${file(config/secrets.yml):${self:custom.currentStage}}
   defaultStage: dev
   currentStage: ${opt:stage, self:custom.defaultStage}
+  profiles:
+    dev: ${self:custom.secrets.AWS_IAM}
   userPoolName: serverless-recipes-user-pool-${self:custom.currentStage}
   userPoolClientName: serverless-recipes-user-pool-client-${self:custom.currentStage}
   usersTableName: users-${self:custom.currentStage}
