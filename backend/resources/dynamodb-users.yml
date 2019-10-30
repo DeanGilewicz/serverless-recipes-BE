@@ -1,0 +1,29 @@
+Resources:
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      # BillingMode: String
+      # GlobalSecondaryIndexes:
+        # - GlobalSecondaryIndex
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      # LocalSecondaryIndexes:
+        # - LocalSecondaryIndex
+      # PointInTimeRecoverySpecification:
+        # PointInTimeRecoverySpecification
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      # SSESpecification:
+        # SSESpecification
+      # StreamSpecification:
+        # StreamSpecification
+      TableName: ${self:custom.usersTableName}
+      # Tags:
+        # - Tag
+      # TimeToLiveSpecification:
+        # TimeToLiveSpecification
