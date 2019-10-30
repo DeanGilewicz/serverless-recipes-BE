@@ -13,7 +13,7 @@ provider:
   stage: ${self:custom.currentStage}
   region: us-west-2
   profile: ${self:custom.profiles.dev}
-  cfnRole: ${self:custom.secrets.AWS_CRN_ROLE}
+  # cfnRole: ${self:custom.secrets.AWS_CRN_ROLE}
 
 # add statements to the Lambda function's IAM Role
   # iamRoleStatements:
@@ -54,8 +54,8 @@ custom:
 
 # define service wide environment variables
 environment:
-  USER_TABLE_NAME: ${self:custom.usersTableName}
-  RECIPES_TABLE_NAME: ${self:custom.recipesTableName}
+  USER_TABLE_NAME: r-${self:custom.usersTableName}
+  RECIPES_TABLE_NAME: r-${self:custom.recipesTableName}
 
 # add packaging information here
 #package:
@@ -109,3 +109,4 @@ functions:
 # CloudFormation resource templates
 resources:
   - ${file(resources/cognito-user-pool.yml)}
+  - ${file(resources/dynamodb-users.yml)}
