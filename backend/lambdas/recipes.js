@@ -2,7 +2,7 @@
 const AWS = require("aws-sdk");
 const documentClient = new AWS.DynamoDB.DocumentClient();
 
-module.exports.getAll = async (event, context, callback) => {
+module.exports.getAll = (event, context, callback) => {
   const eventBodyJson = JSON.parse(event.body);
   // const claims = event.requestContext.authorizer.claims;
   // const username = claims['cognito:username'];
@@ -12,7 +12,7 @@ module.exports.getAll = async (event, context, callback) => {
   // console.log("claims", claims)
 
   const params = {
-      TableName: "users-dev",
+      TableName: "r-recipes-dev",
       // ExpressionAttributeNames: {
       //     "#userIdFilterField": "userIdFilterField"
       // },
@@ -29,16 +29,17 @@ module.exports.getAll = async (event, context, callback) => {
       console.log("dynamodb error" + err);
       callback(err);
     } else {
-      console.log("data", data);
+      // console.log("data", data);
       const response = {
         statusCode: 200,
         headers: {
           "Access-Control-Allow-Origin": "*", // Required for CORS support to work
           "Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(data)
       };
       callback(null, response);
     }
   });
-}
+
+};

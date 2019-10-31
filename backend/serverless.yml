@@ -16,17 +16,19 @@ provider:
   # cfnRole: ${self:custom.secrets.AWS_CRN_ROLE}
 
 # add statements to the Lambda function's IAM Role
-  # iamRoleStatements:
-    # - Effect: "Allow"
-      # Action:
-        # - dynamodb:DescribeTable
-        # - dynamodb:Query
-        # - dynamodb:Scan
-        # - dynamodb:GetItem
-        # - dynamodb:PutItem
-        # - dynamodb:UpdateItem
-        # - dynamodb:DeleteItem
-      # Resource: "*"
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "*"
+      # - { "Fn::GetAtt": ["UsersTable", "Arn"] }
+      # - { "Fn::GetAtt": ["RecipesTable", "Arn"] }
 #      Action:
 #        - "s3:ListBucket"
 #      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
@@ -49,13 +51,13 @@ custom:
     dev: ${self:custom.secrets.AWS_IAM}
   userPoolName: serverless-recipes-user-pool-${self:custom.currentStage}
   userPoolClientName: serverless-recipes-user-pool-client-${self:custom.currentStage}
-  usersTableName: users-${self:custom.currentStage}
-  recipesTableName: recipes-${self:custom.currentStage}
+  usersTableName: r-users-${self:custom.currentStage}
+  recipesTableName: r-recipes-${self:custom.currentStage}
 
 # define service wide environment variables
 environment:
-  USER_TABLE_NAME: r-${self:custom.usersTableName}
-  RECIPES_TABLE_NAME: r-${self:custom.recipesTableName}
+  USER_TABLE_NAME: ${self:custom.usersTableName}
+  RECIPES_TABLE_NAME: ${self:custom.recipesTableName}
 
 # add packaging information here
 package:
@@ -110,3 +112,4 @@ functions:
 resources:
   - ${file(resources/cognito-user-pool.yml)}
   - ${file(resources/dynamodb-users.yml)}
+  - ${file(resources/dynamodb-recipes.yml)}

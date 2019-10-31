@@ -1,0 +1,29 @@
+Resources:
+  RecipesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: recipeId
+          AttributeType: S
+      # BillingMode: String
+      # GlobalSecondaryIndexes:
+        # - GlobalSecondaryIndex
+      KeySchema:
+        - AttributeName: recipeId
+          KeyType: HASH
+      # LocalSecondaryIndexes:
+        # - LocalSecondaryIndex
+      # PointInTimeRecoverySpecification:
+        # PointInTimeRecoverySpecification
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      # SSESpecification:
+        # SSESpecification
+      # StreamSpecification:
+        # StreamSpecification
+      TableName: ${self:custom.recipesTableName}
+      # Tags:
+        # - Tag
+      # TimeToLiveSpecification:
+        # TimeToLiveSpecification
