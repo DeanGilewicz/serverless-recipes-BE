@@ -26,8 +26,9 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "*"
-      # - { "Fn::GetAtt": ["UsersTable", "Arn"] }
+      Resource:
+        - Fn::GetAtt: [RecipesTable, Arn]
+        # - { "Fn::GetAtt": ["UsersTable", "Arn"] }
       # - { "Fn::GetAtt": ["RecipesTable", "Arn"] }
 #      Action:
 #        - "s3:ListBucket"
@@ -75,6 +76,10 @@ functions:
       - http:
           path: api/recipes/getAll
           method: get
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
 #     - websocket: $connect
 #     - s3: ${env:BUCKET}
 #     - schedule: rate(10 minutes)
@@ -113,3 +118,4 @@ resources:
   - ${file(resources/cognito-user-pool.yml)}
   - ${file(resources/dynamodb-users.yml)}
   - ${file(resources/dynamodb-recipes.yml)}
+  - ${file(resources/api-gateway-authorizer.yml)}
