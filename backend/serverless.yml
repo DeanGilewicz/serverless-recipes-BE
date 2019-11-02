@@ -119,3 +119,4 @@ resources:
   - ${file(resources/dynamodb-users.yml)}
   - ${file(resources/dynamodb-recipes.yml)}
   - ${file(resources/api-gateway-authorizer.yml)}
+  - ${file(resources/api-gateway-errors.yml)}
