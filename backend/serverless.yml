@@ -14,6 +14,10 @@ provider:
   region: us-west-2
   profile: ${self:custom.profiles.dev}
   # cfnRole: ${self:custom.secrets.AWS_CRN_ROLE}
+  # define service wide environment variables
+  environment:
+    USER_TABLE_NAME: ${self:custom.usersTableName}
+    RECIPES_TABLE_NAME: ${self:custom.recipesTableName}
 
 # add statements to the Lambda function's IAM Role
   iamRoleStatements:
@@ -27,6 +31,7 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
       Resource:
+        - Fn::GetAtt: [UsersTable, Arn]
         - Fn::GetAtt: [RecipesTable, Arn]
         # - { "Fn::GetAtt": ["UsersTable", "Arn"] }
       # - { "Fn::GetAtt": ["RecipesTable", "Arn"] }
@@ -55,11 +60,6 @@ custom:
   usersTableName: r-users-${self:custom.currentStage}
   recipesTableName: r-recipes-${self:custom.currentStage}
 
-# define service wide environment variables
-environment:
-  USER_TABLE_NAME: ${self:custom.usersTableName}
-  RECIPES_TABLE_NAME: ${self:custom.recipesTableName}
-
 # add packaging information here
 package:
 #  include:
@@ -70,11 +70,11 @@ package:
 
 functions:
   getRecipes:
-    handler: lambdas/recipes.getAll
+    handler: lambdas/recipes.getRecipes
     description: Get all recipes
     events:
       - http:
-          path: api/recipes/getAll
+          path: api/recipes/all
           method: get
           authorizer:
             type: COGNITO_USER_POOLS
@@ -112,6 +112,18 @@ functions:
 #    Define function environment variables here
 #    environment:
 #      variable2: value2
+
+  getRecipe:
+    handler: lambdas/recipes.getRecipe
+    description: Get a recipe
+    events:
+      - http:
+          path: api/recipes/{id}
+          method: get
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
 
 # CloudFormation resource templates
 resources:
