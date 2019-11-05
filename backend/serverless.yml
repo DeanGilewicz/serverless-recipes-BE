@@ -16,8 +16,9 @@ provider:
   # cfnRole: ${self:custom.secrets.AWS_CRN_ROLE}
   # define service wide environment variables
   environment:
-    USER_TABLE_NAME: ${self:custom.usersTableName}
+    AWS_APP_CLIENT_ID: ${self:custom.secrets.AWS_APP_CLIENT_ID}
     RECIPES_TABLE_NAME: ${self:custom.recipesTableName}
+    USER_TABLE_NAME: ${self:custom.usersTableName}
 
 # add statements to the Lambda function's IAM Role
   iamRoleStatements:
@@ -69,6 +70,23 @@ package:
     - config/**
 
 functions:
+
+  createUser:
+    handler: lambdas/users.createUser
+    description: Create Cognito user
+    events:
+      - http:
+          path: api/users/create
+          method: post
+
+  confirmUser:
+    handler: lambdas/users.confirmUser
+    description: Confirm Cognito user
+    events:
+      - http:
+          path: api/users/confirm
+          method: post
+
   getRecipes:
     handler: lambdas/recipes.getRecipes
     description: Get all recipes
