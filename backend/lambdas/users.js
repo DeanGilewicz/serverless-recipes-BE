@@ -138,10 +138,15 @@ module.exports.confirmUser = (event, context, callback) => {
 		lambdaResponse(200, callback, data);
 	})
   .catch(err => {
-		console.error(err);
-		lambdaResponse(404, callback, err);
+		if( err.code === "CodeMismatchException" ) {
+			// The error happens when the verification code is invalid
+			console.error(err);
+			lambdaResponse(401, callback, err.message);
+		} else {
+			console.error(err);
+			lambdaResponse(404, callback, err);
+		}
 	});
-
 };
 
 module.exports.resendConfirmation = (event, context, callback) => {
@@ -170,7 +175,7 @@ module.exports.forgotPassword = (event, context, callback) => {
 		})
     .catch(err => {
 			console.error(err);
-			lambdaResponse(404, callback, err);
+			lambdaResponse(404, callback, err.message);
 		});
 };
 
@@ -200,8 +205,16 @@ module.exports.forgotPasswordConfirm = (event, context, callback) => {
 	};
 	cognitoIdentityServiceProvider.confirmForgotPassword(params, function(err, data) {
 		if (err) {
-			console.log(err, err.stack);
-			lambdaResponse(400, callback, err);
+			if( err.code === "CodeMismatchException" ) {
+				console.log(err, err.stack);
+				lambdaResponse(404, callback, err.message);
+			} else if( err.code === "UserNotFoundException" ) {
+				console.log(err, err.stack);
+				lambdaResponse(404, callback, err.message);
+			} else {
+				console.log(err, err.stack);
+				lambdaResponse(400, callback, err.message);
+			}
 		}	else {
 			//console.log(data); // nothing useful in response
 			lambdaResponse(200, callback, {
@@ -303,7 +316,7 @@ module.exports.login = (event, context, callback) => {
 			} else if( err.code === "UserNotFoundException" ) {
 				// The error happens when the supplied username/email does not exist in the Cognito user pool
 				console.error(err);
-				lambdaResponse(404, callback, err).message;
+				lambdaResponse(404, callback, err.message);
 			} else {
 				console.error(err);
 				lambdaResponse(400, callback, err);
@@ -355,14 +368,80 @@ module.exports.changePassword = (event, context, callback) => {
 
 };
 
-module.exports.logOut = (event, context, callback) => {
-	AmplifyAuth.signOut()
-    .then(data => {
-			console.log('LOGOUT SUCCESS', data);
+module.exports.updateUser = (event, context, callback) => {
+	const eventBodyJson = JSON.parse(event.body);
+	const userAttributes = [...eventBodyJson.userAttributes];
+	const accessToken = eventBodyJson.accessToken;
+
+	var params = {
+		AccessToken: accessToken,
+		UserAttributes: userAttributes
+		// ClientMetadata: {
+		// 	'<StringType>': 'STRING_VALUE',
+		// 	/* '<StringType>': ... */
+		// }
+	};
+	cognitoIdentityServiceProvider.updateUserAttributes(params, function(err, data) {
+		if (err) {
+			if( err.code === "InvalidParameterException" ) {
+				console.log(err, err.stack);
+				lambdaResponse(400, callback, err.message);
+			} else {
+				console.log(err, err.stack);
+				lambdaResponse(400, callback, err);
+			}
+		}	else {
+			// console.log(data); // {}
 			lambdaResponse(200, callback, data);
-		})
-    .catch(err => {
-			console.error('LOGOUT ERROR', err);
-			lambdaResponse(404, callback, err);
-		});
+		}
+	});
+};
+
+module.exports.deleteUser = (event, context, callback) => {
+	const eventBodyJson = JSON.parse(event.body);
+	const accessToken = eventBodyJson.accessToken;
+
+	var params = {
+		AccessToken: accessToken
+	};
+
+	cognitoIdentityServiceProvider.deleteUser(params, function(err, data) {
+		if( err ) {
+			console.log(err, err.stack);
+			lambdaResponse(400, callback, err);
+		}	else {
+			// console.log(data); // {}
+			lambdaResponse(200, callback, {
+				message: "User account deleted"
+			});
+		}
+	});
+};
+
+module.exports.logOut = (event, context, callback) => {
+	const eventBodyJson = JSON.parse(event.body);
+	const accessToken = eventBodyJson.accessToken;
+	// AmplifyAuth.signOut({ global: true })
+  //   .then(data => {
+	// 		console.log('LOGOUT SUCCESS', data);
+	// 		lambdaResponse(200, callback, data);
+	// 	})
+  //   .catch(err => {
+	// 		console.error('LOGOUT ERROR', err);
+	// 		lambdaResponse(404, callback, err);
+	// 	});
+	var params = {
+		AccessToken: accessToken
+	};
+	cognitoIdentityServiceProvider.globalSignOut(params, function(err, data) {
+		if( err ) {
+			console.log(err, err.stack);
+			lambdaResponse(400, callback, err);
+		}	else {
+			// console.log(data); // {}
+			lambdaResponse(200, callback, {
+				message: "Log out successful!"
+			});
+		}
+	});
 };
