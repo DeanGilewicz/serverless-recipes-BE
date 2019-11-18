@@ -94,16 +94,16 @@ module.exports.createUser = (event, context, callback) => {
 			// aws default attributes
 			// address
 			// birthdate
-			email: eventBodyJson.emailAddress,
-			family_name: eventBodyJson.lastName,
+			email: eventBodyJson.emailAddress, // required
+			family_name: eventBodyJson.lastName, // required
 			// gender
 			// given_name
 			// locale
 			// middle_name
-			name: eventBodyJson.firstName,
+			name: eventBodyJson.firstName, // required
 			// nickname
 			// phone_number
-			picture: eventBodyJson.profilePic
+			picture: eventBodyJson.picture
 			// preferred_username
 			// profile
 			// timezone
@@ -119,7 +119,7 @@ module.exports.createUser = (event, context, callback) => {
 	})
 	.catch(err => {
 		console.error(err);
-		lambdaResponse(400, callback, err);
+		lambdaResponse(400, callback, err.message);
 	});
 
 };

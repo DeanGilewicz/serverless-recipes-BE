@@ -5,12 +5,26 @@ Resources:
       AttributeDefinitions:
         - AttributeName: recipeId
           AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
       # BillingMode: String
-      # GlobalSecondaryIndexes:
-        # - GlobalSecondaryIndex
+      GlobalSecondaryIndexes:
+        - IndexName: recipesGlobalSecondaryIndex
+          KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          Projection:
+            # NonKeyAttributes:
+            # - recipeId
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
       KeySchema:
         - AttributeName: recipeId
           KeyType: HASH
+        - AttributeName: userId
+          KeyType: RANGE
       # LocalSecondaryIndexes:
         # - LocalSecondaryIndex
       # PointInTimeRecoverySpecification:
