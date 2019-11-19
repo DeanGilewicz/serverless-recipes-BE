@@ -1,7 +1,7 @@
 'use strict';
 const AWS = require("aws-sdk");
 const documentClient = new AWS.DynamoDB.DocumentClient();
-
+const slugify = require("slugify");
 /*
 400	Bad Request
 401	Unauthorized
@@ -38,15 +38,17 @@ module.exports.createRecipe = (event, context, callback) => {
       "userId": userId,
       "createdAt" :  new Date().getTime() + "",
       "updatedAt" :  new Date().getTime() + "",
-      // "userIdFilterField": {
-      // S: userId
-      // },
       "recipeId": eventBodyJson.recipeId,
+      "slug": slugify(eventBodyJson.recipeId, {
+        replacement: '-',
+        remove: /[*+~.()'"!:@]/g,
+        lower: true
+      }),
       "ingredients": [...eventBodyJson.ingredients], // {name: '', amount: ''}
       "instructions": eventBodyJson.instructions,
       "image": eventBodyJson.image
     },
-    TableName: process.env.RECIPES_TABLE_NAME,
+    TableName: process.env.RECIPES_TABLE_NAME
   };
 
   documentClient.put(params, function(err, data) {
@@ -57,35 +59,20 @@ module.exports.createRecipe = (event, context, callback) => {
           message: "Recipe already exists"
         });
       } else {
-        // console.error("Unable to add item. Error JSON:", JSON.stringify(err, null, 2));
         console.error(err);
         lambdaResponse(400, callback, err);
       }
     } else {
-      // console.log("Added item:", JSON.stringify(data, null, 2));
-      console.log('data', data);
+      // console.log('data', data);
       lambdaResponse(200, callback, data);
     }
   });
 
 };
 
-
 module.exports.getRecipesByUser = (event, context, callback) => {
-  // const eventBodyJson = JSON.parse(event.body);
   const claims = event.requestContext.authorizer.claims;
   const userId = claims['cognito:username'];
-
-  // const params = {
-  //   TableName: process.env.RECIPES_TABLE_NAME,
-  //   // ExpressionAttributeNames: {
-  //   //     "#userIdFilterField": "userIdFilterField"
-  //   // },
-  //   // ExpressionAttributeValues: {
-  //   //     ":userIdFilterField": username
-  //   // },
-  //   // FilterExpression: "#userIdFilterField = :userIdFilterField"
-  // };
 
   const params = {
     IndexName: 'recipesGlobalSecondaryIndex',
@@ -101,46 +88,43 @@ module.exports.getRecipesByUser = (event, context, callback) => {
 
   documentClient.query(params, function(err, data) {
     if( err ) {
-      // console.error("Unable to add item. Error JSON:", JSON.stringify(err, null, 2));
       console.error(err);
       lambdaResponse(400, callback, err);
     } else {
-      // console.log("Added item:", JSON.stringify(data, null, 2));
-      console.log('data', data);
+      // console.log('data', data);
       lambdaResponse(200, callback, data);
     }
   });
 
 };
 
-// module.exports.getRecipe = (event, context, callback) => {
-//   // console.log('EVENT', event);
-//   // console.log('CONTEXT', context);
-//   // const eventBodyJson = JSON.parse(event.body);
-//   // const claims = event.requestContext;
-//   // const username = claims['cognito:username'];
-//   const params = {
-//     TableName: process.env.RECIPES_TABLE_NAME,
-//     Key: {
-//       "recipeId": event.pathParameters.id
-//     },
-//   };
-//   documentClient.get(params, function(err, data) {
-//     if (err) {
-//       console.log('dynamodb error' + err);
-//       callback(err);
-//     }
-//     else {
-//       // console.log(data);
-//       const response = {
-//         statusCode: 200,
-//         headers: {
-//           "Access-Control-Allow-Origin": "*", // Required for CORS support to work
-//           "Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
-//         },
-//         body: JSON.stringify(data)
-//       };
-//       callback(null, response);
-//     }
-//   });
-// }
+module.exports.getRecipeByUser = (event, context, callback) => {
+  const slug = event.pathParameters.slug;
+  const claims = event.requestContext.authorizer.claims;
+  const userId = claims['cognito:username'];
+
+  const params = {
+    IndexName: 'recipesGlobalSecondaryIndex',
+    KeyConditionExpression: "#HashKey = :hkey AND #RangeKey = :rkey",
+    ExpressionAttributeNames: {
+      "#HashKey": "userId",
+      "#RangeKey": "slug"
+    },
+    ExpressionAttributeValues: {
+      ":hkey": userId,
+      ":rkey": slug
+    },
+    TableName: process.env.RECIPES_TABLE_NAME
+  };
+
+  documentClient.query(params, function(err, data) {
+    if( err ) {
+      console.error(err);
+      lambdaResponse(400, callback, err);
+    } else {
+      // console.log('data', data);
+      lambdaResponse(200, callback, data);
+    }
+  });
+
+};

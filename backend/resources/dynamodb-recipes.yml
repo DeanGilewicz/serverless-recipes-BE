@@ -7,12 +7,16 @@ Resources:
           AttributeType: S
         - AttributeName: userId
           AttributeType: S
+        - AttributeName: slug
+          AttributeType: S
       # BillingMode: String
       GlobalSecondaryIndexes:
         - IndexName: recipesGlobalSecondaryIndex
           KeySchema:
           - AttributeName: userId
             KeyType: HASH
+          - AttributeName: slug
+            KeyType: RANGE
           Projection:
             # NonKeyAttributes:
             # - recipeId
