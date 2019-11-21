@@ -4,10 +4,8 @@ Resources:
     Properties:
       AttributeDefinitions:
         - AttributeName: recipeId
-          AttributeType: S
+          AttributeType: N
         - AttributeName: userId
-          AttributeType: S
-        - AttributeName: slug
           AttributeType: S
       # BillingMode: String
       GlobalSecondaryIndexes:
@@ -15,7 +13,7 @@ Resources:
           KeySchema:
           - AttributeName: userId
             KeyType: HASH
-          - AttributeName: slug
+          - AttributeName: recipeId
             KeyType: RANGE
           Projection:
             # NonKeyAttributes:
