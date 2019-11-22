@@ -165,7 +165,7 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 
   const params = {
     Key: {
-      recipeId: recipeId,
+      recipeId: Number(recipeId),
       userId: userId
     },
     // ConditionExpression: '#a < :MAX',
@@ -191,13 +191,43 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
       ':f': new Date().getTime() + ""
     },
     TableName: process.env.RECIPES_TABLE_NAME,
+    ReturnValues: "ALL_NEW"
+  };
+
+  documentClient.update(params, function(err, data) {
+    if( err ) {
+      console.log(err);
+      lambdaResponse(404, callback, err);
+    } else {
+      // console.log('data', data);
+      lambdaResponse(200, callback, data);
+    }
+  });
+
+};
+
+module.exports.deleteRecipeByUser = (event, context, callback) => {
+  const recipeId = event.pathParameters.id;
+  const claims = event.requestContext.authorizer.claims;
+  const userId = claims['cognito:username'];
+
+  const params = {
+    Key: {
+      recipeId: Number(recipeId),
+      userId: userId
+    },
+    ConditionExpression: "attribute_exists(recipeId)",
+    // ExpressionAttributeValues: {
+    //   ":val": 5.0
+    // }
+    TableName: process.env.RECIPES_TABLE_NAME,
     ReturnValues: "NONE"
   };
 
   documentClient.delete(params, function(err, data) {
     if( err ) {
-      console.error(err);
-      lambdaResponse(400, callback, err);
+      console.log(err);
+      lambdaResponse(404, callback, err);
     } else {
       // console.log('data', data);
       lambdaResponse(200, callback, data);
