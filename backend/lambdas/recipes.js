@@ -168,7 +168,7 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
       recipeId: Number(recipeId),
       userId: userId
     },
-    // ConditionExpression: '#a < :MAX',
+    ConditionExpression: "attribute_exists(recipeId)",
     UpdateExpression: 'set #img = :a, #ings = :b, #instrs = :c, #rName = :d, #slug = :e, #uAt = :f',
     ExpressionAttributeNames: {
       "#img": "image",
@@ -217,9 +217,6 @@ module.exports.deleteRecipeByUser = (event, context, callback) => {
       userId: userId
     },
     ConditionExpression: "attribute_exists(recipeId)",
-    // ExpressionAttributeValues: {
-    //   ":val": 5.0
-    // }
     TableName: process.env.RECIPES_TABLE_NAME,
     ReturnValues: "NONE"
   };
