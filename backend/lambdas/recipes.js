@@ -126,9 +126,7 @@ module.exports.getRecipesByUser = (event, context, callback) => {
 
 };
 
-module.exports.handleRecipeByUser = (event, context, callback) => {
-  console.log('event', event);
-  console.log('context', context);
+module.exports.getRecipeByUser = (event, context, callback) => {
   const recipeId = event.pathParameters.id;
   const claims = event.requestContext.authorizer.claims;
   const userId = claims['cognito:username'];
@@ -142,20 +140,20 @@ module.exports.handleRecipeByUser = (event, context, callback) => {
     },
     ExpressionAttributeValues: {
       ":hkey": userId,
-      ":rkey": recipeId
+      ":rkey": Number(recipeId)
     },
     TableName: process.env.RECIPES_TABLE_NAME
   };
 
-  // documentClient.query(params, function(err, data) {
-  //   if( err ) {
-  //     console.error(err);
-  //     lambdaResponse(400, callback, err);
-  //   } else {
-  //     // console.log('data', data);
-  //     lambdaResponse(200, callback, data);
-  //   }
-  // });
+  documentClient.query(params, function(err, data) {
+    if( err ) {
+      console.error(err);
+      lambdaResponse(400, callback, err);
+    } else {
+      // console.log('data', data);
+      lambdaResponse(200, callback, data);
+    }
+  });
 
 };
 
@@ -167,27 +165,36 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 
   const params = {
     Key: {
-      HashKey : recipeId
+      recipeId: recipeId,
+      userId: userId
     },
     // ConditionExpression: '#a < :MAX',
+    UpdateExpression: 'set #img = :a, #ings = :b, #instrs = :c, #rName = :d, #slug = :e, #uAt = :f',
     ExpressionAttributeNames: {
-      '#ingreds' : 'ingredients',
-      '#instruct' : 'instructions',
-      '#image': 'image',
-      '#uAt': 'updatedAt'
+      "#img": "image",
+      "#ings": "ingredients",
+      "#instrs": "instructions",
+      "#rName": "recipeName",
+      "#slug": "slug",
+      "#uAt": "updatedAt"
     },
     ExpressionAttributeValues: {
-      ':a': eventBodyJson.ingredients,
-      ':b': eventBodyJson.instructions,
-      ':c': eventBodyJson.image,
-      ':d': new Date().getTime() + ""
+      ':a': eventBodyJson.image,
+      ':b': eventBodyJson.ingredients,
+      ':c': eventBodyJson.instructions,
+      ':d': eventBodyJson.recipeName,
+      ':e': slugify(eventBodyJson.recipeName, {
+        replacement: '-',
+        remove: /[*+~.()'"!:@]/g,
+        lower: true
+      }),
+      ':f': new Date().getTime() + ""
     },
-    UpdateExpression: 'set #ingreds = :a, #instruct = :b, #image = :c, #uAt = :d',
     TableName: process.env.RECIPES_TABLE_NAME,
-    ReturnValues: "ALL_NEW"
+    ReturnValues: "NONE"
   };
 
-  documentClient.update(params, function(err, data) {
+  documentClient.delete(params, function(err, data) {
     if( err ) {
       console.error(err);
       lambdaResponse(400, callback, err);
