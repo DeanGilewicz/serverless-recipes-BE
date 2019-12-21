@@ -6,6 +6,9 @@ jspm_packages
 .serverless
 backend/config
 
+# Frontend
+.env*
+
 #vscode
 *.code-workspace
 
