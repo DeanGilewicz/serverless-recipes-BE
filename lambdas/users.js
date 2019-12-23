@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-global.fetch = require('node-fetch');
+global.fetch = require("node-fetch");
 global.navigator = () => null;
 
-const AWS = require('aws-sdk');
-const AmplifyCore = require('aws-amplify');
+const AWS = require("aws-sdk");
+const AmplifyCore = require("aws-amplify");
 const AmplifyDefault = AmplifyCore.default;
 const AmplifyAuth = AmplifyCore.Auth;
 const cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider();
@@ -21,16 +21,19 @@ const cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider();
 */
 
 const HEADERS = {
-  "content-type": "application/json",
-  "Access-Control-Allow-Origin": "*", 			// Required for CORS support to work
-  "Access-Control-Allow-Credentials": true	// Required for cookies, authorization headers with HTTPS
+	"content-type": "application/json",
+	// "Access-Control-Allow-Headers":
+	// "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with",
+	// "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
+	"Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
 };
 
 const lambdaResponse = (statusCode, callback, data) => {
 	callback(null, {
 		statusCode: statusCode,
 		headers: HEADERS,
-		body: JSON.stringify(data),
+		body: JSON.stringify(data)
 	});
 };
 
@@ -50,7 +53,7 @@ AmplifyDefault.configure({
 		userPoolId: process.env.AWS_USER_POOL_ID,
 
 		// OPTIONAL - Amazon Cognito Web Client ID (26-char alphanumeric string)
-		userPoolWebClientId: process.env.AWS_APP_CLIENT_ID,
+		userPoolWebClientId: process.env.AWS_APP_CLIENT_ID
 
 		// OPTIONAL - Enforce user authentication prior to accessing AWS resources or not
 		//mandatorySignIn: false,
@@ -86,7 +89,6 @@ AmplifyDefault.configure({
 
 module.exports.createUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-
 	AmplifyAuth.signUp({
 		username: eventBodyJson.emailAddress,
 		password: eventBodyJson.password,
@@ -113,40 +115,42 @@ module.exports.createUser = (event, context, callback) => {
 		}
 		//validationData: []  //optional
 	})
-	.then(data => {
-		// console.log(data);
-		lambdaResponse(200, callback, data);
-	})
-	.catch(err => {
-		console.error(err);
-		lambdaResponse(400, callback, err.message);
-	});
-
+		.then(data => {
+			// console.log(data);
+			lambdaResponse(200, callback, data);
+		})
+		.catch(err => {
+			console.error(err);
+			lambdaResponse(400, callback, err.message);
+		});
 };
 
 module.exports.confirmUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	const username = eventBodyJson.username;
 	const confirmationCode = eventBodyJson.confirmationCode;
-
 	AmplifyAuth.confirmSignUp(username, confirmationCode, {
-    // Optional. Force user confirmation irrespective of existing alias. By default set to True.
-    forceAliasCreation: true
+		// Optional. Force user confirmation irrespective of existing alias. By default set to True.
+		forceAliasCreation: true
 	})
-	.then(data => {
-		// console.log(data);
-		lambdaResponse(200, callback, data);
-	})
-  .catch(err => {
-		if( err.code === "CodeMismatchException" ) {
-			// The error happens when the verification code is invalid
-			console.error(err);
-			lambdaResponse(401, callback, err.message);
-		} else {
-			console.error(err);
-			lambdaResponse(404, callback, err);
-		}
-	});
+		.then(data => {
+			// console.log(data);
+			lambdaResponse(200, callback, data);
+		})
+		.catch(err => {
+			if (err.code === "CodeMismatchException") {
+				// The error happens when the verification code is invalid
+				console.error(err);
+				lambdaResponse(400, callback, err.message);
+			} else if (err.code === "UserNotFoundException") {
+				// The error happens when the username is invalid
+				console.error(err);
+				lambdaResponse(400, callback, err.message);
+			} else {
+				console.error(err);
+				lambdaResponse(404, callback, err);
+			}
+		});
 };
 
 module.exports.resendConfirmation = (event, context, callback) => {
@@ -155,7 +159,7 @@ module.exports.resendConfirmation = (event, context, callback) => {
 	AmplifyAuth.resendSignUp(username)
 		.then(() => {
 			// console.log(data);
-			lambdaResponse(200, callback, { message: 'Sign up resent' });
+			lambdaResponse(200, callback, { message: "Sign up resent" });
 		})
 		.catch(err => {
 			console.error(err);
@@ -167,13 +171,13 @@ module.exports.forgotPassword = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	const username = eventBodyJson.username;
 	AmplifyAuth.forgotPassword(username)
-    .then(data => {
+		.then(data => {
 			// console.log(data); // nothing useful in response
 			lambdaResponse(200, callback, {
 				message: "Password Reset Sent"
 			});
 		})
-    .catch(err => {
+		.catch(err => {
 			console.error(err);
 			lambdaResponse(404, callback, err.message);
 		});
@@ -203,26 +207,28 @@ module.exports.forgotPasswordConfirm = (event, context, callback) => {
 		// 	EncodedData: 'STRING_VALUE'
 		// }
 	};
-	cognitoIdentityServiceProvider.confirmForgotPassword(params, function(err, data) {
+	cognitoIdentityServiceProvider.confirmForgotPassword(params, function(
+		err,
+		data
+	) {
 		if (err) {
-			if( err.code === "CodeMismatchException" ) {
+			if (err.code === "CodeMismatchException") {
 				console.log(err, err.stack);
 				lambdaResponse(404, callback, err.message);
-			} else if( err.code === "UserNotFoundException" ) {
+			} else if (err.code === "UserNotFoundException") {
 				console.log(err, err.stack);
 				lambdaResponse(404, callback, err.message);
 			} else {
 				console.log(err, err.stack);
 				lambdaResponse(400, callback, err.message);
 			}
-		}	else {
+		} else {
 			//console.log(data); // nothing useful in response
 			lambdaResponse(200, callback, {
 				message: "Password Reset Success"
 			});
 		}
 	});
-
 };
 
 module.exports.login = (event, context, callback) => {
@@ -275,28 +281,28 @@ module.exports.login = (event, context, callback) => {
 				});
 			} else {
 			*/
-				// The user directly signs in
-				// console.log(data);
-				lambdaResponse(200, callback, user);
+			// The user directly signs in
+			// console.log(data);
+			lambdaResponse(200, callback, user);
 			/*
 			}
 			*/
 		})
 		.catch(err => {
-			if( err.code === "UserNotConfirmedException" ) {
+			if (err.code === "UserNotConfirmedException") {
 				// The error happens if the user didn't finish the confirmation step when signing up
 				// In this case you need to resend the code and confirm the user
 				console.error(err);
 				AmplifyAuth.resendSignUp(username)
 					.then(() => {
 						// console.log(data);
-						lambdaResponse(200, callback, { message: 'Sign up resent' });
+						lambdaResponse(200, callback, { message: "Sign up resent" });
 					})
 					.catch(err => {
 						console.error(err);
 						lambdaResponse(404, callback, err);
 					});
-			} else if( err.code === "PasswordResetRequiredException" ) {
+			} else if (err.code === "PasswordResetRequiredException") {
 				// The error happens when the password is reset in the Cognito console
 				// In this case you need to call forgotPassword to reset the password
 				console.error(err);
@@ -309,11 +315,11 @@ module.exports.login = (event, context, callback) => {
 						console.error(err);
 						lambdaResponse(404, callback, err);
 					});
-			} else if( err.code === "NotAuthorizedException" ) {
+			} else if (err.code === "NotAuthorizedException") {
 				// The error happens when the incorrect password is provided
 				console.error(err);
 				lambdaResponse(404, callback, err.message);
-			} else if( err.code === "UserNotFoundException" ) {
+			} else if (err.code === "UserNotFoundException") {
 				// The error happens when the supplied username/email does not exist in the Cognito user pool
 				console.error(err);
 				lambdaResponse(404, callback, err.message);
@@ -334,38 +340,37 @@ module.exports.changePassword = (event, context, callback) => {
 	// console.log('newPassword', newPassword);
 	// console.log('cognitoUser', cognitoUser);
 	// AmplifyAuth.currentAuthenticatedUser()
-  //   .then(user => {
+	//   .then(user => {
 	// 			// console.log('USER', user);
 	// 			// return user;
-  //       return AmplifyAuth.changePassword(cognitoUser, currentPassword, newPassword);
-  //   })
+	//       return AmplifyAuth.changePassword(cognitoUser, currentPassword, newPassword);
+	//   })
 	// // AmplifyAuth.changePassword(cognitoUser, currentPassword, newPassword)
-  //   .then(data => {
+	//   .then(data => {
 	// 		console.log(data);
 	// 		lambdaResponse(200, callback, {thing: 'ok'});
 	// 	})
-  //   .catch(err => {
+	//   .catch(err => {
 	// 		console.error(err);
 	// 		lambdaResponse(400, callback, err);
 	// 	});
 
-		const params = {
-			AccessToken: accessToken,
-			PreviousPassword: currentPassword,
-			ProposedPassword: newPassword
-		};
-		cognitoIdentityServiceProvider.changePassword(params, function(err, data) {
-			if (err) {
-				console.log(err, err.stack);
-				lambdaResponse(400, callback, err);
-			}	else {
-				// console.log(data); // {}
-				lambdaResponse(200, callback, {
-					message: "Password Change Success"
-				});
-			}
-		});
-
+	const params = {
+		AccessToken: accessToken,
+		PreviousPassword: currentPassword,
+		ProposedPassword: newPassword
+	};
+	cognitoIdentityServiceProvider.changePassword(params, function(err, data) {
+		if (err) {
+			console.log(err, err.stack);
+			lambdaResponse(400, callback, err);
+		} else {
+			// console.log(data); // {}
+			lambdaResponse(200, callback, {
+				message: "Password Change Success"
+			});
+		}
+	});
 };
 
 module.exports.updateUser = (event, context, callback) => {
@@ -381,16 +386,19 @@ module.exports.updateUser = (event, context, callback) => {
 		// 	/* '<StringType>': ... */
 		// }
 	};
-	cognitoIdentityServiceProvider.updateUserAttributes(params, function(err, data) {
+	cognitoIdentityServiceProvider.updateUserAttributes(params, function(
+		err,
+		data
+	) {
 		if (err) {
-			if( err.code === "InvalidParameterException" ) {
+			if (err.code === "InvalidParameterException") {
 				console.log(err, err.stack);
 				lambdaResponse(400, callback, err.message);
 			} else {
 				console.log(err, err.stack);
 				lambdaResponse(400, callback, err);
 			}
-		}	else {
+		} else {
 			// console.log(data); // {}
 			lambdaResponse(200, callback, data);
 		}
@@ -406,10 +414,10 @@ module.exports.deleteUser = (event, context, callback) => {
 	};
 
 	cognitoIdentityServiceProvider.deleteUser(params, function(err, data) {
-		if( err ) {
+		if (err) {
 			console.log(err, err.stack);
 			lambdaResponse(400, callback, err);
-		}	else {
+		} else {
 			// console.log(data); // {}
 			lambdaResponse(200, callback, {
 				message: "User account deleted"
@@ -422,11 +430,11 @@ module.exports.logOut = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	const accessToken = eventBodyJson.accessToken;
 	// AmplifyAuth.signOut({ global: true })
-  //   .then(data => {
+	//   .then(data => {
 	// 		console.log('LOGOUT SUCCESS', data);
 	// 		lambdaResponse(200, callback, data);
 	// 	})
-  //   .catch(err => {
+	//   .catch(err => {
 	// 		console.error('LOGOUT ERROR', err);
 	// 		lambdaResponse(404, callback, err);
 	// 	});
@@ -434,10 +442,10 @@ module.exports.logOut = (event, context, callback) => {
 		AccessToken: accessToken
 	};
 	cognitoIdentityServiceProvider.globalSignOut(params, function(err, data) {
-		if( err ) {
+		if (err) {
 			console.log(err, err.stack);
 			lambdaResponse(400, callback, err);
-		}	else {
+		} else {
 			// console.log(data); // {}
 			lambdaResponse(200, callback, {
 				message: "Log out successful!"
