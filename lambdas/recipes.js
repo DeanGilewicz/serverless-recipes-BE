@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 const AWS = require("aws-sdk");
 const documentClient = new AWS.DynamoDB.DocumentClient();
 const slugify = require("slugify");
@@ -15,220 +15,231 @@ const slugify = require("slugify");
 */
 
 const HEADERS = {
-  "content-type": "application/json",
-  "Access-Control-Allow-Origin": "*", 			// Required for CORS support to work
-  "Access-Control-Allow-Credentials": true	// Required for cookies, authorization headers with HTTPS
+	"content-type": "application/json",
+	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
+	"Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
 };
 
 const lambdaResponse = (statusCode, callback, data) => {
 	callback(null, {
 		statusCode: statusCode,
 		headers: HEADERS,
-		body: JSON.stringify(data),
+		body: JSON.stringify(data)
 	});
 };
 
 module.exports.createRecipe = (event, context, callback) => {
-  const eventBodyJson = JSON.parse(event.body);
-  const claims = event.requestContext.authorizer.claims;
-  const userId = claims['cognito:username'];
-
-  /* NOTE: When table initially created add 1 item (record) with attribute counter with number value of 0  - counter is a dynamodb reserved word */
-  /* update index and use the returned value for recipeId of new item */
-  const indexParams = {
-    Key: {
-      "id": 1,
-    },
-    UpdateExpression: "set #counter = #counter + :countVal",
-    ExpressionAttributeNames: {
-      "#counter": "counter"
-    },
-    ExpressionAttributeValues: {
-      ":countVal": 1
-    },
-    ReturnValues: "UPDATED_NEW",
-    TableName: process.env.INDEX_TABLE_NAME
-  };
-
-  /* create item (record) */
-
-  let createItemParams = {
-    ConditionExpression: 'attribute_not_exists(recipeId)',
-    Item: {
-      "userId": userId,
-      "createdAt" :  new Date().getTime() + "",
-      "updatedAt" :  new Date().getTime() + "",
-      "recipeName": eventBodyJson.recipeName,
-      "slug": slugify(eventBodyJson.recipeName, {
-        replacement: '-',
-        remove: /[*+~.()'"!:@]/g,
-        lower: true
-      }),
-      "ingredients": [...eventBodyJson.ingredients], // {name: '', amount: ''}
-      "instructions": eventBodyJson.instructions,
-      "image": eventBodyJson.image
-    },
-    TableName: process.env.RECIPES_TABLE_NAME
-  };
-
-  documentClient.update(indexParams, function(err, data) {
-    if( err ) {
-      console.log(err);
-      lambdaResponse(422, callback, err);
-      return;
-    }
-    createItemParams.Item.recipeId = data.Attributes.counter;
-    documentClient.put(createItemParams, function(err, data) {
-      if( err ) {
-        if( err.code === "ConditionalCheckFailedException" ) {
-          console.error(err);
-          lambdaResponse(400, callback, {
-            message: "Recipe already exists"
-          });
-        } else {
-          console.error(err);
-          lambdaResponse(400, callback, err);
-        }
-      } else {
-        // console.log('data', data);
-        lambdaResponse(200, callback, data);
-      }
-    });
-  });
-
+	const eventBodyJson = JSON.parse(event.body);
+	const claims = event.requestContext.authorizer.claims;
+	const userId = claims["cognito:username"];
+	/* NOTE: When index table initially created add 1 item (record) with attribute counter with number value of 0  - counter is a dynamodb reserved word */
+	/* update index and use the returned value for recipeId of new item */
+	const indexParams = {
+		Key: {
+			id: 1
+		},
+		UpdateExpression: "set #counter = #counter + :countVal",
+		ExpressionAttributeNames: {
+			"#counter": "counter"
+		},
+		ExpressionAttributeValues: {
+			":countVal": 1
+		},
+		ReturnValues: "UPDATED_NEW",
+		TableName: process.env.INDEX_TABLE_NAME
+	};
+	/* create item (record) */
+	let createItemParams = {
+		ConditionExpression: "attribute_not_exists(recipeId)",
+		Item: {
+			userId: userId,
+			createdAt: new Date().getTime() + "",
+			updatedAt: new Date().getTime() + "",
+			recipeName: eventBodyJson.recipeName,
+			slug: slugify(eventBodyJson.recipeName, {
+				replacement: "-",
+				remove: /[*+~.()'"!:@]/g,
+				lower: true
+			}),
+			ingredients: [...eventBodyJson.ingredients], // {name: '', amount: ''}
+			instructions: eventBodyJson.instructions
+		},
+		TableName: process.env.RECIPES_TABLE_NAME
+		// ReturnValues: "ALL_OLD" // Doesn't work as no current item
+	};
+	// optional image
+	if (eventBodyJson.image) {
+		createItemParams.Item.image = eventBodyJson.image;
+	}
+	documentClient.update(indexParams, function(err, data) {
+		if (err) {
+			console.log(err);
+			lambdaResponse(422, callback, err);
+			return;
+		}
+		const recipeId = (createItemParams.Item.recipeId = data.Attributes.counter);
+		documentClient.put(createItemParams, function(err, data) {
+			if (err) {
+				if (err.code === "ConditionalCheckFailedException") {
+					console.error(err);
+					lambdaResponse(400, callback, {
+						message: "Recipe already exists"
+					});
+				} else {
+					console.error(err);
+					lambdaResponse(400, callback, err);
+				}
+			} else {
+				// return newly created item
+				const getParams = {
+					Key: {
+						recipeId: Number(recipeId),
+						userId: userId
+					},
+					TableName: process.env.RECIPES_TABLE_NAME
+				};
+				documentClient.get(getParams, function(err, data) {
+					if (err) {
+						// console.log(err, err.stack);
+						lambdaResponse(422, callback, err);
+					} else {
+						console.log("data", data);
+						lambdaResponse(200, callback, data);
+					}
+				});
+			}
+		});
+	});
 };
 
 module.exports.getRecipesByUser = (event, context, callback) => {
-  const claims = event.requestContext.authorizer.claims;
-  const userId = claims['cognito:username'];
+	const claims = event.requestContext.authorizer.claims;
+	const userId = claims["cognito:username"];
 
-  const params = {
-    IndexName: 'recipesGlobalSecondaryIndex',
-    KeyConditionExpression: "#HashKey = :hkey",
-    ExpressionAttributeNames: {
-      "#HashKey": "userId"
-    },
-    ExpressionAttributeValues: {
-      ":hkey": userId
-    },
-    TableName: process.env.RECIPES_TABLE_NAME
-  };
+	const params = {
+		IndexName: "recipesGlobalSecondaryIndex",
+		KeyConditionExpression: "#HashKey = :hkey",
+		ExpressionAttributeNames: {
+			"#HashKey": "userId"
+		},
+		ExpressionAttributeValues: {
+			":hkey": userId
+		},
+		TableName: process.env.RECIPES_TABLE_NAME
+	};
 
-  documentClient.query(params, function(err, data) {
-    if( err ) {
-      console.error(err);
-      lambdaResponse(400, callback, err);
-    } else {
-      // console.log('data', data);
-      lambdaResponse(200, callback, data);
-    }
-  });
-
+	documentClient.query(params, function(err, data) {
+		if (err) {
+			console.error(err);
+			lambdaResponse(400, callback, err);
+		} else {
+			// console.log('data', data);
+			lambdaResponse(200, callback, data);
+		}
+	});
 };
 
 module.exports.getRecipeByUser = (event, context, callback) => {
-  const recipeId = event.pathParameters.id;
-  const claims = event.requestContext.authorizer.claims;
-  const userId = claims['cognito:username'];
+	const recipeId = event.pathParameters.id;
+	const claims = event.requestContext.authorizer.claims;
+	const userId = claims["cognito:username"];
 
-  const params = {
-    IndexName: 'recipesGlobalSecondaryIndex',
-    KeyConditionExpression: "#HashKey = :hkey AND #RangeKey = :rkey",
-    ExpressionAttributeNames: {
-      "#HashKey": "userId",
-      "#RangeKey": "recipeId"
-    },
-    ExpressionAttributeValues: {
-      ":hkey": userId,
-      ":rkey": Number(recipeId)
-    },
-    TableName: process.env.RECIPES_TABLE_NAME
-  };
+	const params = {
+		IndexName: "recipesGlobalSecondaryIndex",
+		KeyConditionExpression: "#HashKey = :hkey AND #RangeKey = :rkey",
+		ExpressionAttributeNames: {
+			"#HashKey": "userId",
+			"#RangeKey": "recipeId"
+		},
+		ExpressionAttributeValues: {
+			":hkey": userId,
+			":rkey": Number(recipeId)
+		},
+		TableName: process.env.RECIPES_TABLE_NAME
+	};
 
-  documentClient.query(params, function(err, data) {
-    if( err ) {
-      console.error(err);
-      lambdaResponse(400, callback, err);
-    } else {
-      // console.log('data', data);
-      lambdaResponse(200, callback, data);
-    }
-  });
-
+	documentClient.query(params, function(err, data) {
+		if (err) {
+			console.error(err);
+			lambdaResponse(400, callback, err);
+		} else {
+			// console.log('data', data);
+			lambdaResponse(200, callback, data);
+		}
+	});
 };
 
 module.exports.updateRecipeByUser = (event, context, callback) => {
-  const recipeId = event.pathParameters.id;
-  const eventBodyJson = JSON.parse(event.body);
-  const claims = event.requestContext.authorizer.claims;
-  const userId = claims['cognito:username'];
+	const recipeId = event.pathParameters.id;
+	const eventBodyJson = JSON.parse(event.body);
+	const claims = event.requestContext.authorizer.claims;
+	const userId = claims["cognito:username"];
 
-  const params = {
-    Key: {
-      recipeId: Number(recipeId),
-      userId: userId
-    },
-    ConditionExpression: "attribute_exists(recipeId)",
-    UpdateExpression: 'set #img = :a, #ings = :b, #instrs = :c, #rName = :d, #slug = :e, #uAt = :f',
-    ExpressionAttributeNames: {
-      "#img": "image",
-      "#ings": "ingredients",
-      "#instrs": "instructions",
-      "#rName": "recipeName",
-      "#slug": "slug",
-      "#uAt": "updatedAt"
-    },
-    ExpressionAttributeValues: {
-      ':a': eventBodyJson.image,
-      ':b': eventBodyJson.ingredients,
-      ':c': eventBodyJson.instructions,
-      ':d': eventBodyJson.recipeName,
-      ':e': slugify(eventBodyJson.recipeName, {
-        replacement: '-',
-        remove: /[*+~.()'"!:@]/g,
-        lower: true
-      }),
-      ':f': new Date().getTime() + ""
-    },
-    TableName: process.env.RECIPES_TABLE_NAME,
-    ReturnValues: "ALL_NEW"
-  };
+	const params = {
+		Key: {
+			recipeId: Number(recipeId),
+			userId: userId
+		},
+		ConditionExpression: "attribute_exists(recipeId)",
+		UpdateExpression:
+			"set #img = :a, #ings = :b, #instrs = :c, #rName = :d, #slug = :e, #uAt = :f",
+		ExpressionAttributeNames: {
+			"#img": "image",
+			"#ings": "ingredients",
+			"#instrs": "instructions",
+			"#rName": "recipeName",
+			"#slug": "slug",
+			"#uAt": "updatedAt"
+		},
+		ExpressionAttributeValues: {
+			":a": eventBodyJson.image,
+			":b": eventBodyJson.ingredients,
+			":c": eventBodyJson.instructions,
+			":d": eventBodyJson.recipeName,
+			":e": slugify(eventBodyJson.recipeName, {
+				replacement: "-",
+				remove: /[*+~.()'"!:@]/g,
+				lower: true
+			}),
+			":f": new Date().getTime() + ""
+		},
+		TableName: process.env.RECIPES_TABLE_NAME,
+		ReturnValues: "ALL_NEW"
+	};
 
-  documentClient.update(params, function(err, data) {
-    if( err ) {
-      console.log(err);
-      lambdaResponse(404, callback, err);
-    } else {
-      // console.log('data', data);
-      lambdaResponse(200, callback, data);
-    }
-  });
-
+	documentClient.update(params, function(err, data) {
+		if (err) {
+			console.log(err);
+			lambdaResponse(404, callback, err);
+		} else {
+			// console.log('data', data);
+			lambdaResponse(200, callback, data);
+		}
+	});
 };
 
 module.exports.deleteRecipeByUser = (event, context, callback) => {
-  const recipeId = event.pathParameters.id;
-  const claims = event.requestContext.authorizer.claims;
-  const userId = claims['cognito:username'];
+	const recipeId = event.pathParameters.id;
+	const claims = event.requestContext.authorizer.claims;
+	const userId = claims["cognito:username"];
 
-  const params = {
-    Key: {
-      recipeId: Number(recipeId),
-      userId: userId
-    },
-    ConditionExpression: "attribute_exists(recipeId)",
-    TableName: process.env.RECIPES_TABLE_NAME,
-    ReturnValues: "NONE"
-  };
+	const params = {
+		Key: {
+			recipeId: Number(recipeId),
+			userId: userId
+		},
+		ConditionExpression: "attribute_exists(recipeId)",
+		TableName: process.env.RECIPES_TABLE_NAME,
+		ReturnValues: "NONE"
+	};
 
-  documentClient.delete(params, function(err, data) {
-    if( err ) {
-      console.log(err);
-      lambdaResponse(404, callback, err);
-    } else {
-      // console.log('data', data);
-      lambdaResponse(200, callback, data);
-    }
-  });
-
+	documentClient.delete(params, function(err, data) {
+		if (err) {
+			console.log(err);
+			lambdaResponse(404, callback, err);
+		} else {
+			// console.log('data', data);
+			lambdaResponse(200, callback, data);
+		}
+	});
 };

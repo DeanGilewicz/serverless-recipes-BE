@@ -5,6 +5,7 @@ global.navigator = () => null;
 
 const AWS = require("aws-sdk");
 const AmplifyCore = require("aws-amplify");
+const jwt = require("jsonwebtoken");
 const AmplifyDefault = AmplifyCore.default;
 const AmplifyAuth = AmplifyCore.Auth;
 const cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider();
@@ -25,7 +26,8 @@ const HEADERS = {
 	// "Access-Control-Allow-Headers":
 	// "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with",
 	// "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
-	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
+	// "Access-Control-Allow-Origin": "*", // Required for CORS support to work
+	"Access-Control-Allow-Origin": "*",
 	"Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
 };
 
@@ -86,6 +88,59 @@ AmplifyDefault.configure({
 // const cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider({ apiVersion: '2016-04-18' });
 // const cognitoIdentity = new AWS.CognitoIdentity({ apiVersion: '2014-06-30' });
 // const documentClient = new AWS.DynamoDB.DocumentClient();
+
+module.exports.authorization = (event, context, callback) => {
+	// read headers to access JWTs
+	const token = event.headers.Authorization;
+	const refreshToken = event.headers["x-custom-token"];
+	// if no idToken or accessToken passed (will most likely not get here since API Gateway will return an Unauthorized error)
+	if (!token) {
+		lambdaResponse(401, callback, {
+			message: "Unauthorized"
+		});
+	}
+	// decode token
+	const tokenDecoded = jwt.decode(token);
+	if (new Date().getTime() >= tokenDecoded.exp * 1000) {
+		// expired so invoke auth fn
+		const params = {
+			AuthFlow: "REFRESH_TOKEN_AUTH",
+			ClientId: process.env.AWS_APP_CLIENT_ID,
+			// AnalyticsMetadata: {
+			// 	AnalyticsEndpointId: "STRING_VALUE"
+			// },
+			AuthParameters: {
+				REFRESH_TOKEN: refreshToken // JWT has no payload
+			}
+			// ClientMetadata: {
+			// 	"<StringType>": "STRING_VALUE"
+			// 	/* '<StringType>': ... */
+			// },
+			// UserContextData: {
+			// 	EncodedData: "STRING_VALUE"
+			// }
+		};
+		// console.log("PARAMS", params);
+		cognitoIdentityServiceProvider.initiateAuth(params, function(err, data) {
+			if (err) {
+				// refresh token invalid - need to reauthenticate
+				console.log(err);
+				// console.log("ERROR HERE OH NO");
+				lambdaResponse(401, callback, {
+					message: "Unauthorized"
+				});
+			} else {
+				// return the new access and id tokens
+				lambdaResponse(200, callback, data);
+			}
+		});
+	} else {
+		// not expired so keep tokens
+		lambdaResponse(200, callback, {
+			message: "Authorized"
+		});
+	}
+};
 
 module.exports.createUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
@@ -282,8 +337,42 @@ module.exports.login = (event, context, callback) => {
 			} else {
 			*/
 			// The user directly signs in
-			// console.log(data);
-			lambdaResponse(200, callback, user);
+			const accessToken = user.signInUserSession.accessToken.jwtToken;
+			const idToken = user.signInUserSession.idToken.jwtToken;
+			const refreshToken = user.signInUserSession.refreshToken.token;
+			const accessTokenDecoded = jwt.decode(accessToken);
+			const expiration = accessTokenDecoded.exp * 1000;
+			const modifiedUserResponse = {
+				auth: {
+					accessToken,
+					idToken,
+					refreshToken,
+					expiration
+				},
+				emailVerified: user.attributes.email_verified,
+				emailAddress: user.attributes.email,
+				firstName: user.attributes.name,
+				lastName: user.attributes.family_name
+			};
+			const response = {
+				user: modifiedUserResponse
+			};
+			lambdaResponse(200, callback, response);
+			// const COOKIE_HEADERS = {
+			// 	"content-type": "application/json",
+			// 	// "Access-Control-Allow-Headers":
+			// 	// "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with",
+			// 	// "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+			// 	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
+			// 	"Access-Control-Allow-Credentials": true,
+			// 	"Set-Cookie":
+			// 		"thinkCookie=recipes1;Path=/;SameSite=None;Domain=.app.localhost" // Required for cookies, authorization headers with HTTPS
+			// };
+			// callback(null, {
+			// 	statusCode: 200,
+			// 	headers: COOKIE_HEADERS,
+			// 	body: JSON.stringify(response)
+			// });
 			/*
 			}
 			*/
@@ -427,8 +516,6 @@ module.exports.deleteUser = (event, context, callback) => {
 };
 
 module.exports.logOut = (event, context, callback) => {
-	const eventBodyJson = JSON.parse(event.body);
-	const accessToken = eventBodyJson.accessToken;
 	// AmplifyAuth.signOut({ global: true })
 	//   .then(data => {
 	// 		console.log('LOGOUT SUCCESS', data);
@@ -438,8 +525,8 @@ module.exports.logOut = (event, context, callback) => {
 	// 		console.error('LOGOUT ERROR', err);
 	// 		lambdaResponse(404, callback, err);
 	// 	});
-	var params = {
-		AccessToken: accessToken
+	const params = {
+		AccessToken: event.headers.Authorization
 	};
 	cognitoIdentityServiceProvider.globalSignOut(params, function(err, data) {
 		if (err) {
