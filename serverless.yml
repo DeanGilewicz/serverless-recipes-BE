@@ -193,7 +193,7 @@ functions:
     events:
       - http:
           path: api/users/updateUser
-          method: post
+          method: put
           cors: true
           authorizer:
             type: COGNITO_USER_POOLS
@@ -209,7 +209,7 @@ functions:
     events:
       - http:
           path: api/users/deleteUser
-          method: post
+          method: delete
           cors: true
           authorizer:
             type: COGNITO_USER_POOLS
@@ -226,7 +226,18 @@ functions:
       - http:
           path: api/users/logOut
           method: post
-          cors: true
+          # cors: true
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-Custom-Token
+            allowCredentials: false
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId:

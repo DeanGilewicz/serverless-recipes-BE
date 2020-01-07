@@ -230,7 +230,7 @@ module.exports.deleteRecipeByUser = (event, context, callback) => {
 		},
 		ConditionExpression: "attribute_exists(recipeId)",
 		TableName: process.env.RECIPES_TABLE_NAME,
-		ReturnValues: "NONE"
+		ReturnValues: "ALL_OLD"
 	};
 
 	documentClient.delete(params, function(err, data) {

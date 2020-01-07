@@ -467,7 +467,7 @@ module.exports.updateUser = (event, context, callback) => {
 	const userAttributes = [...eventBodyJson.userAttributes];
 	const accessToken = eventBodyJson.accessToken;
 
-	var params = {
+	const params = {
 		AccessToken: accessToken,
 		UserAttributes: userAttributes
 		// ClientMetadata: {
@@ -489,7 +489,36 @@ module.exports.updateUser = (event, context, callback) => {
 			}
 		} else {
 			// console.log(data); // {}
-			lambdaResponse(200, callback, data);
+			// lambdaResponse(200, callback, data); // returns empty obj
+			cognitoIdentityServiceProvider.getUser(
+				{ AccessToken: accessToken },
+				function(err, updatedUser) {
+					if (err) {
+						console.log(err, err.stack);
+						lambdaResponse(400, callback, err.message);
+					}
+					// clean up response data
+					const modifiedUserResponse = {};
+					updatedUser.UserAttributes.forEach(attribute => {
+						if (attribute.Name !== "sub") {
+							// if (attribute.Name === "email") {
+							// 	modifiedUserResponse.emailAddress = attribute.Value;
+							// }
+							// if (attribute.Name === "email_verified") {
+							// 	modifiedUserResponse.emailVerified = attribute.Value;
+							// }
+							if (attribute.Name === "name") {
+								modifiedUserResponse.firstName = attribute.Value;
+							}
+							if (attribute.Name === "family_name") {
+								modifiedUserResponse.lastName = attribute.Value;
+							}
+						}
+					});
+					// send response
+					lambdaResponse(200, callback, modifiedUserResponse); // returns empty obj
+				}
+			);
 		}
 	});
 };
@@ -526,7 +555,7 @@ module.exports.logOut = (event, context, callback) => {
 	// 		lambdaResponse(404, callback, err);
 	// 	});
 	const params = {
-		AccessToken: event.headers.Authorization
+		AccessToken: event.headers["X-Custom-Token"]
 	};
 	cognitoIdentityServiceProvider.globalSignOut(params, function(err, data) {
 		if (err) {
