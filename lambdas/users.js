@@ -555,7 +555,7 @@ module.exports.logOut = (event, context, callback) => {
 	// 		lambdaResponse(404, callback, err);
 	// 	});
 	const params = {
-		AccessToken: event.headers["X-Custom-Token"]
+		AccessToken: event.headers["x-custom-token"]
 	};
 	cognitoIdentityServiceProvider.globalSignOut(params, function(err, data) {
 		if (err) {
