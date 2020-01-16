@@ -6,6 +6,8 @@ global.navigator = () => null;
 const AWS = require("aws-sdk");
 const AmplifyCore = require("aws-amplify");
 const jwt = require("jsonwebtoken");
+const validator = require("validator");
+
 const AmplifyDefault = AmplifyCore.default;
 const AmplifyAuth = AmplifyCore.Auth;
 const cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider();
@@ -145,22 +147,22 @@ module.exports.authorization = (event, context, callback) => {
 module.exports.createUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	AmplifyAuth.signUp({
-		username: eventBodyJson.emailAddress,
-		password: eventBodyJson.password,
+		username: validator.escape(eventBodyJson.emailAddress),
+		password: validator.escape(eventBodyJson.password),
 		attributes: {
 			// aws default attributes
 			// address
 			// birthdate
-			email: eventBodyJson.emailAddress, // required
-			family_name: eventBodyJson.lastName, // required
+			email: validator.escape(eventBodyJson.emailAddress), // required
+			family_name: validator.escape(eventBodyJson.lastName), // required
 			// gender
 			// given_name
 			// locale
 			// middle_name
-			name: eventBodyJson.firstName, // required
+			name: validator.escape(eventBodyJson.firstName), // required
 			// nickname
 			// phone_number
-			picture: eventBodyJson.picture
+			picture: validator.escape(eventBodyJson.picture)
 			// preferred_username
 			// profile
 			// timezone
@@ -182,8 +184,8 @@ module.exports.createUser = (event, context, callback) => {
 
 module.exports.confirmUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = eventBodyJson.username;
-	const confirmationCode = eventBodyJson.confirmationCode;
+	const username = validator.escape(eventBodyJson.username);
+	const confirmationCode = validator.escape(eventBodyJson.confirmationCode);
 	AmplifyAuth.confirmSignUp(username, confirmationCode, {
 		// Optional. Force user confirmation irrespective of existing alias. By default set to True.
 		forceAliasCreation: true
@@ -210,7 +212,7 @@ module.exports.confirmUser = (event, context, callback) => {
 
 module.exports.resendConfirmation = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = eventBodyJson.username;
+	const username = validator.escape(eventBodyJson.username);
 	AmplifyAuth.resendSignUp(username)
 		.then(() => {
 			// console.log(data);
@@ -224,7 +226,7 @@ module.exports.resendConfirmation = (event, context, callback) => {
 
 module.exports.forgotPassword = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = eventBodyJson.username;
+	const username = validator.escape(eventBodyJson.username);
 	AmplifyAuth.forgotPassword(username)
 		.then(data => {
 			// console.log(data); // nothing useful in response
@@ -241,9 +243,9 @@ module.exports.forgotPassword = (event, context, callback) => {
 module.exports.forgotPasswordConfirm = (event, context, callback) => {
 	const clientId = process.env.AWS_APP_CLIENT_ID;
 	const eventBodyJson = JSON.parse(event.body);
-	const confirmationCode = eventBodyJson.confirmationCode;
-	const password = eventBodyJson.password;
-	const username = eventBodyJson.username;
+	const confirmationCode = validator.escape(eventBodyJson.confirmationCode);
+	const password = validator.escape(eventBodyJson.password);
+	const username = validator.escape(eventBodyJson.username);
 
 	const params = {
 		ClientId: clientId,
@@ -288,8 +290,8 @@ module.exports.forgotPasswordConfirm = (event, context, callback) => {
 
 module.exports.login = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = eventBodyJson.username;
-	const password = eventBodyJson.password;
+	const username = validator.escape(eventBodyJson.username);
+	const password = validator.escape(eventBodyJson.password);
 
 	AmplifyAuth.signIn(username, password)
 		.then(user => {
@@ -421,9 +423,9 @@ module.exports.login = (event, context, callback) => {
 
 module.exports.changePassword = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const currentPassword = eventBodyJson.currentPassword;
-	const newPassword = eventBodyJson.newPassword;
-	const accessToken = eventBodyJson.accessToken;
+	const currentPassword = validator.escape(eventBodyJson.currentPassword);
+	const newPassword = validator.escape(eventBodyJson.newPassword);
+	const accessToken = validator.escape(eventBodyJson.accessToken);
 
 	// console.log('currentPassword', currentPassword);
 	// console.log('newPassword', newPassword);
@@ -464,7 +466,17 @@ module.exports.changePassword = (event, context, callback) => {
 
 module.exports.updateUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const userAttributes = [...eventBodyJson.userAttributes];
+
+	// sanitize user attrs
+	let sanitizedUserAttrubutes = [];
+	if (eventBodyJson.userAttributes.length > 0) {
+		sanitizedUserAttrubutes = eventBodyJson.userAttributes.map(attribute => {
+			const name = validator.escape(attribute.Name);
+			const value = validator.escape(attribute.Value);
+			return { name, amount };
+		});
+	}
+	const userAttributes = sanitizedUserAttrubutes;
 	const accessToken = eventBodyJson.accessToken;
 
 	const params = {

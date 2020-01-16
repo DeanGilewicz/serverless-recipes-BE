@@ -2,6 +2,7 @@
 const AWS = require("aws-sdk");
 const documentClient = new AWS.DynamoDB.DocumentClient();
 const slugify = require("slugify");
+const validator = require("validator");
 
 /*
 400	Bad Request
@@ -48,28 +49,37 @@ module.exports.createRecipe = (event, context, callback) => {
 		ReturnValues: "UPDATED_NEW",
 		TableName: process.env.INDEX_TABLE_NAME
 	};
+	// sanitize ingredients
+	let sanitizedIngredients = [];
+	if (eventBodyJson.ingredients.length > 0) {
+		sanitizedIngredients = eventBodyJson.ingredients.map(ingredient => {
+			const name = validator.escape(ingredient.name);
+			const amount = validator.escape(ingredient.amount);
+			return { name, amount };
+		});
+	}
 	/* create item (record) */
 	let createItemParams = {
 		ConditionExpression: "attribute_not_exists(recipeId)",
 		Item: {
-			userId: userId,
+			userId: validator.escape(userId),
 			createdAt: new Date().getTime() + "",
 			updatedAt: new Date().getTime() + "",
-			recipeName: eventBodyJson.recipeName,
+			recipeName: validator.escape(eventBodyJson.recipeName),
 			slug: slugify(eventBodyJson.recipeName, {
 				replacement: "-",
 				remove: /[*+~.()'"!:@]/g,
 				lower: true
 			}),
-			ingredients: [...eventBodyJson.ingredients], // {name: '', amount: ''}
-			instructions: eventBodyJson.instructions
+			ingredients: sanitizedIngredients, // [{name: '', amount: ''},{name: '', amount: ''}]
+			instructions: validator.escape(eventBodyJson.instructions)
 		},
 		TableName: process.env.RECIPES_TABLE_NAME
 		// ReturnValues: "ALL_OLD" // Doesn't work as no current item
 	};
 	// optional image
 	if (eventBodyJson.image) {
-		createItemParams.Item.image = eventBodyJson.image;
+		createItemParams.Item.image = validator.escape(eventBodyJson.image);
 	}
 	documentClient.update(indexParams, function(err, data) {
 		if (err) {
@@ -175,6 +185,16 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 	const claims = event.requestContext.authorizer.claims;
 	const userId = claims["cognito:username"];
 
+	// sanitize ingredients
+	let sanitizedIngredients = [];
+	if (eventBodyJson.ingredients.length > 0) {
+		sanitizedIngredients = eventBodyJson.ingredients.map(ingredient => {
+			const name = validator.escape(ingredient.name);
+			const amount = validator.escape(ingredient.amount);
+			return { name, amount };
+		});
+	}
+
 	const params = {
 		Key: {
 			recipeId: Number(recipeId),
@@ -192,11 +212,11 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 			"#uAt": "updatedAt"
 		},
 		ExpressionAttributeValues: {
-			":a": eventBodyJson.image,
-			":b": eventBodyJson.ingredients,
-			":c": eventBodyJson.instructions,
-			":d": eventBodyJson.recipeName,
-			":e": slugify(eventBodyJson.recipeName, {
+			":a": validator.escape(eventBodyJson.image),
+			":b": sanitizedIngredients,
+			":c": validator.escape(eventBodyJson.instructions),
+			":d": validator.escape(eventBodyJson.recipeName),
+			":e": slugify(validator.escape(eventBodyJson.recipeName), {
 				replacement: "-",
 				remove: /[*+~.()'"!:@]/g,
 				lower: true
