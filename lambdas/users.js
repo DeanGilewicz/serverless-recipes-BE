@@ -162,7 +162,7 @@ module.exports.createUser = (event, context, callback) => {
 			name: validator.escape(eventBodyJson.firstName), // required
 			// nickname
 			// phone_number
-			picture: validator.escape(eventBodyJson.picture)
+			picture: validator.escape(eventBodyJson.picture).replace(/&#x2f;/gi, "/")
 			// preferred_username
 			// profile
 			// timezone
@@ -184,8 +184,8 @@ module.exports.createUser = (event, context, callback) => {
 
 module.exports.confirmUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = validator.escape(eventBodyJson.username);
-	const confirmationCode = validator.escape(eventBodyJson.confirmationCode);
+	const username = eventBodyJson.username;
+	const confirmationCode = eventBodyJson.confirmationCode;
 	AmplifyAuth.confirmSignUp(username, confirmationCode, {
 		// Optional. Force user confirmation irrespective of existing alias. By default set to True.
 		forceAliasCreation: true
@@ -212,7 +212,7 @@ module.exports.confirmUser = (event, context, callback) => {
 
 module.exports.resendConfirmation = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = validator.escape(eventBodyJson.username);
+	const username = eventBodyJson.username;
 	AmplifyAuth.resendSignUp(username)
 		.then(() => {
 			// console.log(data);
@@ -226,7 +226,7 @@ module.exports.resendConfirmation = (event, context, callback) => {
 
 module.exports.forgotPassword = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = validator.escape(eventBodyJson.username);
+	const username = eventBodyJson.username;
 	AmplifyAuth.forgotPassword(username)
 		.then(data => {
 			// console.log(data); // nothing useful in response
@@ -243,9 +243,9 @@ module.exports.forgotPassword = (event, context, callback) => {
 module.exports.forgotPasswordConfirm = (event, context, callback) => {
 	const clientId = process.env.AWS_APP_CLIENT_ID;
 	const eventBodyJson = JSON.parse(event.body);
-	const confirmationCode = validator.escape(eventBodyJson.confirmationCode);
+	const confirmationCode = eventBodyJson.confirmationCode;
 	const password = validator.escape(eventBodyJson.password);
-	const username = validator.escape(eventBodyJson.username);
+	const username = eventBodyJson.username;
 
 	const params = {
 		ClientId: clientId,
@@ -290,8 +290,8 @@ module.exports.forgotPasswordConfirm = (event, context, callback) => {
 
 module.exports.login = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-	const username = validator.escape(eventBodyJson.username);
-	const password = validator.escape(eventBodyJson.password);
+	const username = eventBodyJson.username;
+	const password = eventBodyJson.password;
 
 	AmplifyAuth.signIn(username, password)
 		.then(user => {
@@ -425,7 +425,7 @@ module.exports.changePassword = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	const currentPassword = validator.escape(eventBodyJson.currentPassword);
 	const newPassword = validator.escape(eventBodyJson.newPassword);
-	const accessToken = validator.escape(eventBodyJson.accessToken);
+	const accessToken = eventBodyJson.accessToken;
 
 	// console.log('currentPassword', currentPassword);
 	// console.log('newPassword', newPassword);
@@ -468,15 +468,15 @@ module.exports.updateUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 
 	// sanitize user attrs
-	let sanitizedUserAttrubutes = [];
+	let sanitizedUserAttributes = [];
 	if (eventBodyJson.userAttributes.length > 0) {
-		sanitizedUserAttrubutes = eventBodyJson.userAttributes.map(attribute => {
+		sanitizedUserAttributes = eventBodyJson.userAttributes.map(attribute => {
 			const name = validator.escape(attribute.Name);
-			const value = validator.escape(attribute.Value);
+			const amount = validator.escape(attribute.Value);
 			return { name, amount };
 		});
 	}
-	const userAttributes = sanitizedUserAttrubutes;
+	const userAttributes = sanitizedUserAttributes;
 	const accessToken = eventBodyJson.accessToken;
 
 	const params = {

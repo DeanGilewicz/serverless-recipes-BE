@@ -53,7 +53,7 @@ module.exports.createRecipe = (event, context, callback) => {
 	let sanitizedIngredients = [];
 	if (eventBodyJson.ingredients.length > 0) {
 		sanitizedIngredients = eventBodyJson.ingredients.map(ingredient => {
-			const name = validator.escape(ingredient.name);
+			const name = validator.escape(ingredient.name).replace(/&#x27;/gi, "'");
 			const amount = validator.escape(ingredient.amount);
 			return { name, amount };
 		});
@@ -65,21 +65,27 @@ module.exports.createRecipe = (event, context, callback) => {
 			userId: validator.escape(userId),
 			createdAt: new Date().getTime() + "",
 			updatedAt: new Date().getTime() + "",
-			recipeName: validator.escape(eventBodyJson.recipeName),
+			recipeName: validator
+				.escape(eventBodyJson.recipeName)
+				.replace(/&#x27;/gi, "'"),
 			slug: slugify(eventBodyJson.recipeName, {
 				replacement: "-",
 				remove: /[*+~.()'"!:@]/g,
 				lower: true
 			}),
 			ingredients: sanitizedIngredients, // [{name: '', amount: ''},{name: '', amount: ''}]
-			instructions: validator.escape(eventBodyJson.instructions)
+			instructions: validator
+				.escape(eventBodyJson.instructions)
+				.replace(/&#x27;/gi, "'")
 		},
 		TableName: process.env.RECIPES_TABLE_NAME
 		// ReturnValues: "ALL_OLD" // Doesn't work as no current item
 	};
 	// optional image
 	if (eventBodyJson.image) {
-		createItemParams.Item.image = validator.escape(eventBodyJson.image);
+		createItemParams.Item.image = validator
+			.escape(eventBodyJson.image)
+			.replace(/&#x2f;/gi, "/");
 	}
 	documentClient.update(indexParams, function(err, data) {
 		if (err) {
@@ -184,15 +190,22 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	const claims = event.requestContext.authorizer.claims;
 	const userId = claims["cognito:username"];
-
+	console.log("UPDATE RECIPE BY USER", eventBodyJson);
 	// sanitize ingredients
 	let sanitizedIngredients = [];
 	if (eventBodyJson.ingredients.length > 0) {
 		sanitizedIngredients = eventBodyJson.ingredients.map(ingredient => {
-			const name = validator.escape(ingredient.name);
+			const name = validator.escape(ingredient.name).replace(/&#x27;/gi, "'");
 			const amount = validator.escape(ingredient.amount);
 			return { name, amount };
 		});
+	}
+
+	let sanitizedImage = null;
+	if (eventBodyJson.image) {
+		sanitizedImage = validator
+			.escape(eventBodyJson.image)
+			.replace(/&#x2f;/gi, "/");
 	}
 
 	const params = {
@@ -212,10 +225,12 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 			"#uAt": "updatedAt"
 		},
 		ExpressionAttributeValues: {
-			":a": validator.escape(eventBodyJson.image),
+			":a": sanitizedImage,
 			":b": sanitizedIngredients,
-			":c": validator.escape(eventBodyJson.instructions),
-			":d": validator.escape(eventBodyJson.recipeName),
+			":c": validator
+				.escape(eventBodyJson.instructions)
+				.replace(/&#x27;/gi, "'"),
+			":d": validator.escape(eventBodyJson.recipeName).replace(/&#x27;/gi, "'"),
 			":e": slugify(validator.escape(eventBodyJson.recipeName), {
 				replacement: "-",
 				remove: /[*+~.()'"!:@]/g,
