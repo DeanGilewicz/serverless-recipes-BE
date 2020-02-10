@@ -1,6 +1,8 @@
 "use strict";
 const AWS = require("aws-sdk");
 const documentClient = new AWS.DynamoDB.DocumentClient();
+const cloudinary = require("cloudinary").v2;
+const multipart = require("parse-multipart");
 const slugify = require("slugify");
 const validator = require("validator");
 
@@ -15,12 +17,20 @@ const validator = require("validator");
 504	Gateway Timeout
 */
 
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	api_key: process.env.CLOUDINARY_API_KEY,
+	api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 const HEADERS = {
 	"content-type": "application/json",
 	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
 	"Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
+	// "Access-Control-Allow-Headers": "Content-Type" // for file upload
 };
 
+// handle response
 const lambdaResponse = (statusCode, callback, data) => {
 	callback(null, {
 		statusCode: statusCode,
@@ -190,7 +200,7 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	const claims = event.requestContext.authorizer.claims;
 	const userId = claims["cognito:username"];
-	console.log("UPDATE RECIPE BY USER", eventBodyJson);
+
 	// sanitize ingredients
 	let sanitizedIngredients = [];
 	if (eventBodyJson.ingredients.length > 0) {
@@ -251,6 +261,77 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 			lambdaResponse(200, callback, data);
 		}
 	});
+};
+
+module.exports.updateRecipeImageByUser = (event, context, callback) => {
+	const recipeId = event.pathParameters.id;
+	const claims = event.requestContext.authorizer.claims;
+	const userId = claims["cognito:username"];
+	const bodyBuffer = Buffer.from(event.body, "base64");
+	const boundary = multipart.getBoundary(event.headers["content-type"]);
+	const parts = multipart.Parse(bodyBuffer, boundary);
+	const fileType = parts[0].type;
+	const base64 = Buffer.from(parts[0].data).toString("base64");
+	// [
+	// 	{
+	// 		filename: 'house.jpg',
+	//   	type: 'image/jpeg',
+	//   	data:
+	// 			<Buffer ...
+	// 	}
+	// ]
+	if (fileType !== "image/jpeg" && fileType !== "image/png") {
+		return lambdaResponse(400, callback, { message: "invalid image" });
+	}
+
+	// const HEADERS_FILE = {
+	// 	"content-type": "application/json",
+	// 	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
+	// 	"Access-Control-Allow-Credentials": true, // Required for cookies, authorization headers with HTTPS
+	// 	"Access-Control-Allow-Headers": "Content-Type" // for file upload
+	// 	// Accept: "image/jpeg"
+	// };
+
+	// send to cloudinary
+	cloudinary.uploader.upload(
+		"data:" + fileType + ";base64," + base64,
+		{ folder: `recipes/${recipeId}` },
+		(err, result) => {
+			if (err) {
+				console.log(err);
+				return lambdaResponse(400, callback, err);
+			}
+			const cloudinaryImage = result.secure_url;
+			const params = {
+				Key: {
+					recipeId: Number(recipeId),
+					userId: userId
+				},
+				ConditionExpression: "attribute_exists(recipeId)",
+				UpdateExpression: "set #img = :a, #uAt = :f",
+				ExpressionAttributeNames: {
+					"#img": "image",
+					"#uAt": "updatedAt"
+				},
+				ExpressionAttributeValues: {
+					":a": cloudinaryImage,
+					":f": new Date().getTime() + ""
+				},
+				TableName: process.env.RECIPES_TABLE_NAME,
+				ReturnValues: "ALL_NEW"
+			};
+			// update db recipe image url
+			documentClient.update(params, function(err, data) {
+				if (err) {
+					console.log(err);
+					lambdaResponse(400, callback, err);
+				} else {
+					// console.log('data', data);
+					lambdaResponse(200, callback, data);
+				}
+			});
+		}
+	);
 };
 
 module.exports.deleteRecipeByUser = (event, context, callback) => {
