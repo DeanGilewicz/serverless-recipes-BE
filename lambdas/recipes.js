@@ -25,7 +25,8 @@ cloudinary.config({
 
 const HEADERS = {
 	"content-type": "application/json",
-	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
+	// "Access-Control-Allow-Origin": "*", // Required for CORS support to work
+	"Access-Control-Allow-Origin": process.env.FE_WEBSITE_DOMAIN,
 	"Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
 	// "Access-Control-Allow-Headers": "Content-Type" // for file upload
 };
@@ -99,7 +100,7 @@ module.exports.createRecipe = (event, context, callback) => {
 	}
 	documentClient.update(indexParams, function(err, data) {
 		if (err) {
-			console.log(err);
+			console.error(err);
 			lambdaResponse(422, callback, err);
 			return;
 		}
@@ -126,10 +127,8 @@ module.exports.createRecipe = (event, context, callback) => {
 				};
 				documentClient.get(getParams, function(err, data) {
 					if (err) {
-						// console.log(err, err.stack);
 						lambdaResponse(422, callback, err);
 					} else {
-						console.log("data", data);
 						lambdaResponse(200, callback, data);
 					}
 				});
@@ -159,7 +158,6 @@ module.exports.getRecipesByUser = (event, context, callback) => {
 			console.error(err);
 			lambdaResponse(400, callback, err);
 		} else {
-			// console.log('data', data);
 			lambdaResponse(200, callback, data);
 		}
 	});
@@ -169,7 +167,6 @@ module.exports.getRecipeByUser = (event, context, callback) => {
 	const recipeId = event.pathParameters.id;
 	const claims = event.requestContext.authorizer.claims;
 	const userId = claims["cognito:username"];
-
 	const params = {
 		IndexName: "recipesGlobalSecondaryIndex",
 		KeyConditionExpression: "#HashKey = :hkey AND #RangeKey = :rkey",
@@ -183,13 +180,11 @@ module.exports.getRecipeByUser = (event, context, callback) => {
 		},
 		TableName: process.env.RECIPES_TABLE_NAME
 	};
-
 	documentClient.query(params, function(err, data) {
 		if (err) {
 			console.error(err);
 			lambdaResponse(400, callback, err);
 		} else {
-			// console.log('data', data);
 			lambdaResponse(200, callback, data);
 		}
 	});
@@ -254,10 +249,9 @@ module.exports.updateRecipeByUser = (event, context, callback) => {
 
 	documentClient.update(params, function(err, data) {
 		if (err) {
-			console.log(err);
+			console.error(err);
 			lambdaResponse(404, callback, err);
 		} else {
-			// console.log('data', data);
 			lambdaResponse(200, callback, data);
 		}
 	});
@@ -284,21 +278,13 @@ module.exports.updateRecipeImageByUser = (event, context, callback) => {
 		return lambdaResponse(400, callback, { message: "invalid image" });
 	}
 
-	// const HEADERS_FILE = {
-	// 	"content-type": "application/json",
-	// 	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
-	// 	"Access-Control-Allow-Credentials": true, // Required for cookies, authorization headers with HTTPS
-	// 	"Access-Control-Allow-Headers": "Content-Type" // for file upload
-	// 	// Accept: "image/jpeg"
-	// };
-
 	// send to cloudinary
 	cloudinary.uploader.upload(
 		"data:" + fileType + ";base64," + base64,
 		{ folder: `recipes/${recipeId}` },
 		(err, result) => {
 			if (err) {
-				console.log(err);
+				console.error(err);
 				return lambdaResponse(400, callback, err);
 			}
 			const cloudinaryImage = result.secure_url;
@@ -323,10 +309,9 @@ module.exports.updateRecipeImageByUser = (event, context, callback) => {
 			// update db recipe image url
 			documentClient.update(params, function(err, data) {
 				if (err) {
-					console.log(err);
+					console.error(err);
 					lambdaResponse(400, callback, err);
 				} else {
-					// console.log('data', data);
 					lambdaResponse(200, callback, data);
 				}
 			});
@@ -351,10 +336,9 @@ module.exports.deleteRecipeByUser = (event, context, callback) => {
 
 	documentClient.delete(params, function(err, data) {
 		if (err) {
-			console.log(err);
+			console.error(err);
 			lambdaResponse(404, callback, err);
 		} else {
-			// console.log('data', data);
 			lambdaResponse(200, callback, data);
 		}
 	});

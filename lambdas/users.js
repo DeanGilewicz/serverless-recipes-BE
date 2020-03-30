@@ -29,7 +29,7 @@ const HEADERS = {
 	// "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with",
 	// "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
 	// "Access-Control-Allow-Origin": "*", // Required for CORS support to work
-	"Access-Control-Allow-Origin": "*",
+	"Access-Control-Allow-Origin": process.env.FE_WEBSITE_DOMAIN,
 	"Access-Control-Allow-Credentials": true // Required for cookies, authorization headers with HTTPS
 };
 
@@ -87,10 +87,6 @@ AmplifyDefault.configure({
 	}
 });
 
-// const cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider({ apiVersion: '2016-04-18' });
-// const cognitoIdentity = new AWS.CognitoIdentity({ apiVersion: '2014-06-30' });
-// const documentClient = new AWS.DynamoDB.DocumentClient();
-
 module.exports.authorization = (event, context, callback) => {
 	// read headers to access JWTs
 	const token = event.headers.Authorization;
@@ -122,12 +118,10 @@ module.exports.authorization = (event, context, callback) => {
 			// 	EncodedData: "STRING_VALUE"
 			// }
 		};
-		// console.log("PARAMS", params);
 		cognitoIdentityServiceProvider.initiateAuth(params, function(err, data) {
 			if (err) {
 				// refresh token invalid - need to reauthenticate
-				console.log(err);
-				// console.log("ERROR HERE OH NO");
+				console.error(err);
 				lambdaResponse(401, callback, {
 					message: "Unauthorized"
 				});
@@ -170,10 +164,9 @@ module.exports.createUser = (event, context, callback) => {
 			// website
 			// other custom attributes
 		}
-		//validationData: []  //optional
+		// validationData: []  // optional
 	})
 		.then(data => {
-			// console.log(data);
 			lambdaResponse(200, callback, data);
 		})
 		.catch(err => {
@@ -191,7 +184,6 @@ module.exports.confirmUser = (event, context, callback) => {
 		forceAliasCreation: true
 	})
 		.then(data => {
-			// console.log(data);
 			lambdaResponse(200, callback, data);
 		})
 		.catch(err => {
@@ -215,7 +207,6 @@ module.exports.resendConfirmation = (event, context, callback) => {
 	const username = eventBodyJson.username;
 	AmplifyAuth.resendSignUp(username)
 		.then(() => {
-			// console.log(data);
 			lambdaResponse(200, callback, { message: "Sign up resent" });
 		})
 		.catch(err => {
@@ -229,7 +220,7 @@ module.exports.forgotPassword = (event, context, callback) => {
 	const username = eventBodyJson.username;
 	AmplifyAuth.forgotPassword(username)
 		.then(data => {
-			// console.log(data); // nothing useful in response
+			// nothing useful in response
 			lambdaResponse(200, callback, {
 				message: "Password Reset Sent"
 			});
@@ -270,17 +261,17 @@ module.exports.forgotPasswordConfirm = (event, context, callback) => {
 	) {
 		if (err) {
 			if (err.code === "CodeMismatchException") {
-				console.log(err, err.stack);
+				console.error(err, err.stack);
 				lambdaResponse(404, callback, err.message);
 			} else if (err.code === "UserNotFoundException") {
-				console.log(err, err.stack);
+				console.error(err, err.stack);
 				lambdaResponse(404, callback, err.message);
 			} else {
-				console.log(err, err.stack);
+				console.error(err, err.stack);
 				lambdaResponse(400, callback, err.message);
 			}
 		} else {
-			//console.log(data); // nothing useful in response
+			// nothing useful in response
 			lambdaResponse(200, callback, {
 				message: "Password Reset Success"
 			});
@@ -295,49 +286,6 @@ module.exports.login = (event, context, callback) => {
 
 	AmplifyAuth.signIn(username, password)
 		.then(user => {
-			/*
-			if( user.challengeName === "SMS_MFA" || user.challengeName === "SOFTWARE_TOKEN_MFA" ) {
-				// Get the code from the UI inputs and then trigger the following function with a button click
-				const code = getCodeFromUserInput();
-				// If MFA is enabled, sign-in should be confirmed with the confirmation code
-				AmplifyAuth.confirmSignIn(
-					user,   // Return object from Auth.signIn()
-					code,   // Confirmation code
-					mfaType // MFA Type e.g. SMS_MFA, SOFTWARE_TOKEN_MFA
-				)
-				.then(data => {
-					// console.log(data);
-					lambdaResponse(200, callback, data);
-				});
-			} else if( user.challengeName === "NEW_PASSWORD_REQUIRED" ) {
-				const {requiredAttributes} = user.challengeParam; // the array of required attributes, e.g ['email', 'phone_number']
-				// Get the new password and required attributes from the UI inputs and then trigger the following function with a button click
-				// For example, the email and phone_number are required attributes
-				const {username, email, phone_number} = getInfoFromUserInput();
-				AmplifyAuth.completeNewPassword(
-					user,					// the Cognito User Object
-					newPassword,	// the new password
-					// OPTIONAL, the required attributes
-					{
-						email,
-						phone_number,
-					}
-				)
-				.then(data => {
-					// console.log(data);
-					lambdaResponse(200, callback, data);
-				});
-			} else if( user.challengeName === "MFA_SETUP" ) {
-				// This happens when the MFA method is TOTP
-				// The user needs to setup the TOTP before using it
-				// More info please check the Enabling MFA part
-				AmplifyAuth.setupTOTP(user)
-				.then(data => {
-					// console.log(data);
-					lambdaResponse(200, callback, data);
-				});
-			} else {
-			*/
 			// The user directly signs in
 			const accessToken = user.signInUserSession.accessToken.jwtToken;
 			const idToken = user.signInUserSession.idToken.jwtToken;
@@ -360,24 +308,6 @@ module.exports.login = (event, context, callback) => {
 				user: modifiedUserResponse
 			};
 			lambdaResponse(200, callback, response);
-			// const COOKIE_HEADERS = {
-			// 	"content-type": "application/json",
-			// 	// "Access-Control-Allow-Headers":
-			// 	// "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with",
-			// 	// "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
-			// 	"Access-Control-Allow-Origin": "*", // Required for CORS support to work
-			// 	"Access-Control-Allow-Credentials": true,
-			// 	"Set-Cookie":
-			// 		"thinkCookie=recipes1;Path=/;SameSite=None;Domain=.app.localhost" // Required for cookies, authorization headers with HTTPS
-			// };
-			// callback(null, {
-			// 	statusCode: 200,
-			// 	headers: COOKIE_HEADERS,
-			// 	body: JSON.stringify(response)
-			// });
-			/*
-			}
-			*/
 		})
 		.catch(err => {
 			if (err.code === "UserNotConfirmedException") {
@@ -386,7 +316,6 @@ module.exports.login = (event, context, callback) => {
 				console.error(err);
 				AmplifyAuth.resendSignUp(username)
 					.then(() => {
-						// console.log(data);
 						lambdaResponse(200, callback, { message: "Sign up resent" });
 					})
 					.catch(err => {
@@ -399,7 +328,6 @@ module.exports.login = (event, context, callback) => {
 				console.error(err);
 				AmplifyAuth.forgotPassword(username)
 					.then(data => {
-						// console.log(data);
 						lambdaResponse(200, callback, data);
 					})
 					.catch(err => {
@@ -426,26 +354,6 @@ module.exports.changePassword = (event, context, callback) => {
 	const currentPassword = validator.escape(eventBodyJson.currentPassword);
 	const newPassword = validator.escape(eventBodyJson.newPassword);
 	const accessToken = eventBodyJson.accessToken;
-
-	// console.log('currentPassword', currentPassword);
-	// console.log('newPassword', newPassword);
-	// console.log('cognitoUser', cognitoUser);
-	// AmplifyAuth.currentAuthenticatedUser()
-	//   .then(user => {
-	// 			// console.log('USER', user);
-	// 			// return user;
-	//       return AmplifyAuth.changePassword(cognitoUser, currentPassword, newPassword);
-	//   })
-	// // AmplifyAuth.changePassword(cognitoUser, currentPassword, newPassword)
-	//   .then(data => {
-	// 		console.log(data);
-	// 		lambdaResponse(200, callback, {thing: 'ok'});
-	// 	})
-	//   .catch(err => {
-	// 		console.error(err);
-	// 		lambdaResponse(400, callback, err);
-	// 	});
-
 	const params = {
 		AccessToken: accessToken,
 		PreviousPassword: currentPassword,
@@ -453,10 +361,10 @@ module.exports.changePassword = (event, context, callback) => {
 	};
 	cognitoIdentityServiceProvider.changePassword(params, function(err, data) {
 		if (err) {
-			console.log(err, err.stack);
+			console.error(err, err.stack);
 			lambdaResponse(400, callback, err);
 		} else {
-			// console.log(data); // {}
+			// {}
 			lambdaResponse(200, callback, {
 				message: "Password Change Success"
 			});
@@ -466,7 +374,6 @@ module.exports.changePassword = (event, context, callback) => {
 
 module.exports.updateUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
-
 	// sanitize user attrs
 	let sanitizedUserAttributes = [];
 	if (eventBodyJson.userAttributes.length > 0) {
@@ -478,7 +385,6 @@ module.exports.updateUser = (event, context, callback) => {
 	}
 	const userAttributes = sanitizedUserAttributes;
 	const accessToken = eventBodyJson.accessToken;
-
 	const params = {
 		AccessToken: accessToken,
 		UserAttributes: userAttributes
@@ -493,20 +399,20 @@ module.exports.updateUser = (event, context, callback) => {
 	) {
 		if (err) {
 			if (err.code === "InvalidParameterException") {
-				console.log(err, err.stack);
+				console.error(err, err.stack);
 				lambdaResponse(400, callback, err.message);
 			} else {
-				console.log(err, err.stack);
+				console.error(err, err.stack);
 				lambdaResponse(400, callback, err);
 			}
 		} else {
-			// console.log(data); // {}
+			// {}
 			// lambdaResponse(200, callback, data); // returns empty obj
 			cognitoIdentityServiceProvider.getUser(
 				{ AccessToken: accessToken },
 				function(err, updatedUser) {
 					if (err) {
-						console.log(err, err.stack);
+						console.error(err, err.stack);
 						lambdaResponse(400, callback, err.message);
 					}
 					// clean up response data
@@ -538,17 +444,15 @@ module.exports.updateUser = (event, context, callback) => {
 module.exports.deleteUser = (event, context, callback) => {
 	const eventBodyJson = JSON.parse(event.body);
 	const accessToken = eventBodyJson.accessToken;
-
-	var params = {
+	const params = {
 		AccessToken: accessToken
 	};
-
 	cognitoIdentityServiceProvider.deleteUser(params, function(err, data) {
 		if (err) {
-			console.log(err, err.stack);
+			console.error(err, err.stack);
 			lambdaResponse(400, callback, err);
 		} else {
-			// console.log(data); // {}
+			// {}
 			lambdaResponse(200, callback, {
 				message: "User account deleted"
 			});
@@ -557,24 +461,15 @@ module.exports.deleteUser = (event, context, callback) => {
 };
 
 module.exports.logOut = (event, context, callback) => {
-	// AmplifyAuth.signOut({ global: true })
-	//   .then(data => {
-	// 		console.log('LOGOUT SUCCESS', data);
-	// 		lambdaResponse(200, callback, data);
-	// 	})
-	//   .catch(err => {
-	// 		console.error('LOGOUT ERROR', err);
-	// 		lambdaResponse(404, callback, err);
-	// 	});
 	const params = {
 		AccessToken: event.headers["x-custom-token"]
 	};
 	cognitoIdentityServiceProvider.globalSignOut(params, function(err, data) {
 		if (err) {
-			console.log(err, err.stack);
+			console.error(err, err.stack);
 			lambdaResponse(400, callback, err);
 		} else {
-			// console.log(data); // {}
+			// {}
 			lambdaResponse(200, callback, {
 				message: "Log out successful!"
 			});
