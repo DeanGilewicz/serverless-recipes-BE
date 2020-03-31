@@ -65,7 +65,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -91,7 +91,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -113,7 +113,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -135,7 +135,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -157,7 +157,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -179,7 +179,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -201,8 +201,8 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}"
-            headers:
+            origin: '*' # <-- Specify allowed origin
+            headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
               - Authorization
@@ -228,7 +228,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -254,7 +254,7 @@ functions:
           method: put
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -280,7 +280,7 @@ functions:
           method: delete
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -306,8 +306,8 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}"
-            headers:
+            origin: '*' # <-- Specify allowed origin
+            headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
               - Authorization
@@ -342,7 +342,7 @@ functions:
           method: post
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -383,7 +383,7 @@ functions:
           method: get
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -424,7 +424,7 @@ functions:
           method: get
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -456,7 +456,7 @@ functions:
           method: put
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -488,7 +488,7 @@ functions:
           method: put
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
@@ -520,7 +520,7 @@ functions:
           method: delete
           # cors: true
           cors:
-            origin: "${self:custom.secrets.FE_WEBSITE_DOMAIN}" # <-- Specify allowed origin
+            origin: '*' # <-- Specify allowed origin
             headers: # <-- Specify allowed headers
               - Content-Type
               - X-Amz-Date
